@@ -24,7 +24,7 @@ import * as util from "./ui_util.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
-const FIRE = "🔥"
+const FIRE = "⚠︎"
 
 var sentinelDataSource = new Cesium.CustomDataSource("sentinel");
 var sentinelView = undefined;
@@ -82,8 +82,8 @@ function initSentinelView() {
             { name: "show", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.showDetails, toggleShowDetails, null) },
             { name: "id", width: "2rem", attrs: ["alignLeft"], map: e => e.id },
             { name: "alert", width: "1.5rem", attrs: [], map: e => e.alertStatus() },
-            { name: "prob", width: "2rem", attrs: ["fixed"], map: e => util.f_1.format(e.sentinel.fire.fireProb) },
-            { name: "date", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.sentinel.date) }
+            { name: "prob", width: "3rem", attrs: ["fixed"], map: e => util.f_1.format(e.sentinel.fire.fireProb) },
+            { name: "date", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.sentinel.date) }
         ]);
     }
     return view;
