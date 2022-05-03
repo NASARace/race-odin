@@ -65,15 +65,15 @@ class SentinelEntry {
     }
 }
 
-export function initialize() {
+ui.registerLoadFunction(function initialize() {
     uiCesium.addDataSource(sentinelDataSource);
     sentinelView = initSentinelView();
 
     //uiCesium.setEntitySelectionHandler(trackSelection);
-    ws.addWsHandler(handleWsSentinelMessages);
+    ws.addWsHandler(config.wsUrl, handleWsSentinelMessages);
 
-    return true;
-}
+    console.log("ui_cesium_sentinel initialized");
+});
 
 function initSentinelView() {
     let view = ui.getList("sentinel.list");

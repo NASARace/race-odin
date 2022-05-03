@@ -101,7 +101,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   //--- document content
 
   def uiSentinelWindow(title: String="Sentinels"): Text.TypedTag[String] = {
-    uiWindow(title, "sentinel")(
+    uiWindow(title, "sentinel", "sentinel-icon.svg")(
       uiList("sentinel.list", 10, "main.selectSentinel(event)"),
     )
   }
@@ -110,15 +110,16 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
     uiIcon("sentinel-icon.svg", "main.toggleWindow(event,'sentinel')", "sentinel_icon")
   }
 
-  def uiCesiumSentinelResources: Seq[Text.TypedTag[String]] = {
-    Seq( extModule("ui_cesium_sentinel.js"))
-  }
 
-  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumSentinelResources
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ Seq(
+    extModule("ui_cesium_sentinel.js")
+  )
 
-  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiSentinelWindow(), uiSentinelIcon)
-
-
+  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(
+    uiSentinelWindow(),
+    uiSentinelIcon
+  )
+  
   //--- websocket support
 
   def serializeSentinel (channel: String, sentinel: Sentinel): Unit = {

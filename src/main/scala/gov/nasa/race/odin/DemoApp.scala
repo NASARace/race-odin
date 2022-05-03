@@ -19,7 +19,8 @@ package gov.nasa.race.odin
 import com.typesafe.config.Config
 import gov.nasa.race.cesium.{CesiumBldgRoute, CesiumGpsRoute, CesiumLayerRoute, CesiumTrackRoute, CesiumWindRoute}
 import gov.nasa.race.core.ParentActor
-import gov.nasa.race.http.{CachedFileAssetMap, MainDocumentRoute}
+import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute}
+import gov.nasa.race.ui.UiSettingsRoute
 
 object DemoApp extends CachedFileAssetMap {
   val sourcePath = "src/main/resources/gov/nasa/race/odin"
@@ -30,17 +31,11 @@ import DemoApp._
  * the aggregation of micro-services we provide under the configured URL
  */
 class DemoApp(val parent: ParentActor, val config: Config)
-         extends MainDocumentRoute // the document (HTML + config.js) creator
+         extends DocumentRoute // the document (HTML + config.js) creator
+           with UiSettingsRoute
            with CesiumBldgRoute // a route that includes OSMBuildings support
            with CesiumGpsRoute // a route that tracks GPS devices on the ground
            with CesiumTrackRoute // a route that tracks aircraft/drones
            with CesiumLayerRoute  // a route that contains configured, user-selectable display layers (KML, GeoJSON etc.)
            with CesiumWindRoute  // a route that can display wind fields
            with SentinelRoute // a route that can display Sentinel sensor state
-           {
-  val mainModule = "demo_app.js"
-  val mainCss = "demo_app.css"
-
-  override def mainModuleContent: Array[Byte] = getContent(mainModule)
-  override def mainCssContent: Array[Byte] = getContent(mainCss)
-}
