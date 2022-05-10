@@ -32,8 +32,7 @@ import scalatags.Text
 
 import java.net.InetSocketAddress
 
-object SentinelRoute extends CachedFileAssetMap {
-  val sourcePath = "src/main/resources/gov/nasa/race/odin"
+object SentinelRoute {
   val SENTINEL = asc("sentinel")
 }
 import SentinelRoute._
@@ -56,25 +55,23 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   val sentinelAssets = Map.from(config.getKeyValuePairsOrElse("sentinel-assets", Seq(("sentinel","sentinel-sym.png"))))
 
   def getSentinelAssetContent (key: String): Option[HttpEntity.Strict] = {
-    sentinelAssets.get(key).map( fileName => getContent(fileName))
+    sentinelAssets.get(key).map( fileName => getFileAssetContent(fileName))
   }
 
   //--- route
 
   def sentinelRoute: Route = {
     get {
-      path("ui_cesium_sentinel.js") {
-        complete( ResponseData.js( getContent("ui_cesium_sentinel.js")))
-      } ~ path("sentinel-icon.svg") {
-        complete( ResponseData.svg( getContent("sentinel-icon.svg")))
-      } ~ pathPrefix( "sentinel-asset" ~ Slash) { // mesh-models and images
+      pathPrefix( "sentinel-asset" ~ Slash) { // mesh-models and images
         extractUnmatchedPath { p =>
           getSentinelAssetContent(p.toString()) match {
             case Some(content) => complete(content)
             case None => complete(StatusCodes.NotFound, p.toString())
           }
         }
-      }
+      } ~
+      fileAsset("ui_cesium_sentinel.js") ~
+      fileAsset("sentinel-icon.svg")
     }
   }
 
@@ -119,7 +116,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
     uiSentinelWindow(),
     uiSentinelIcon
   )
-  
+
   //--- websocket support
 
   def serializeSentinel (channel: String, sentinel: Sentinel): Unit = {

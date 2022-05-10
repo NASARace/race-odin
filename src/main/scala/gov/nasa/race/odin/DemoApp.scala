@@ -22,10 +22,6 @@ import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute}
 import gov.nasa.race.ui.UiSettingsRoute
 
-object DemoApp extends CachedFileAssetMap {
-  val sourcePath = "src/main/resources/gov/nasa/race/odin"
-}
-import DemoApp._
 
 /**
  * the aggregation of micro-services we provide under the configured URL
