@@ -23,14 +23,12 @@ import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, creat
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 
 import java.io.InputStream
-import scala.collection.mutable
 
 /**
   * replay actor for Sentinel update archives, which are normal TaggedArchive (*.ta) files with JSON
   * payloads specifying Sentinel device states
   */
-class SentinelReplayActor (val config: Config) extends Replayer[TaggedArchiveReader] {
-  val sentinels = mutable.Map.empty[Int,Sentinel]  // map of all sentinel states we know of
+class SentinelReplayActor (val config: Config) extends Replayer[TaggedArchiveReader]  {
 
   class SentinelReader (val iStream: InputStream, val pathName: String="<unknown>", val initBufferSize: Int)
                                                                      extends SentinelParser with TaggedArchiveReader {
@@ -38,21 +36,11 @@ class SentinelReplayActor (val config: Config) extends Replayer[TaggedArchiveRea
       configuredPathName(conf),
       conf.getIntOrElse("buffer-size",8192))
 
-    val updates = mutable.Map.empty[Int,Sentinel] // the set of sentinels changed in this entry
-
     override protected def parseEntryData(limit: Int): Any = {
       if (initialize(buf,limit)) {
-        updates.clear()
-        parse().foreach { sensorUpdate =>
-          val deviceId = sensorUpdate.deviceId
-          val updatedSentinel = sentinels.getOrElseUpdate(deviceId, new Sentinel(deviceId)).updateWith(sensorUpdate)
-
-          updates += deviceId -> updatedSentinel
-          sentinels += deviceId -> updatedSentinel
-        }
-        updates.values.toSeq
-
-      } else Seq.empty[Sentinel]
+        val sensorReadings = parse()
+        if (sensorReadings.nonEmpty) Some(SentinelUpdates(sensorReadings)) else None
+      } else None
     }
   }
 
