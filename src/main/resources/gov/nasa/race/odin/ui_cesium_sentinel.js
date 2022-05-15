@@ -265,8 +265,10 @@ function updateSentinelEntry(e, sentinel) {
 function checkFireAsset(e) {
     let sentinel = e.sentinel;
 
-    if (sentinel.gps && e.alertStatus() === FIRE) { // TODO
+    if (sentinel.fire && sentinel.fire.fireProb > 0.5) {
         if (e.assets) {
+            e.assets.symbol.billboard.color = config.sentinelAlertColor;
+
             if (!e.assets.fire) {
                 e.assets.fire = createFireAsset(e);
                 if (e.assets.fire) e.assets.fire.show = true;

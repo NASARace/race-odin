@@ -113,6 +113,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
 
     s"""
       export const sentinelColor = Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinel-color", "chartreuse")}');
+      export const sentinelAlertColor = Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinel-alert-color", "deeppink")}');
       export const sentinelLabelOffset = new Cesium.Cartesian2( $labelOffsetX, $labelOffsetY);
       export const sentinelBillboardDC = new Cesium.DistanceDisplayCondition( 0, 200000);
       export const sentinelImageWidth = ${config.getIntOrElse("sentinel-img-width", 400)};
