@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Anatomy of an ODIN-fire application</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation</a></li>
+                  <li class="level2"><a href="vision.html">Vision</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2 active"><a href="#">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="demo.html">Building and running the demo application</a></li>
+                  <li class="level3"><a href="demo.html#how-to-install-and-build-prerequisites-and-components">How to install and build prerequisites and components</a></li>
+                  <li class="level3"><a href="demo.html#how-to-run-the-race-odin-demo">How to run the RACE-ODIN demo</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="anatomy-of-an-odin-fire-application" class="title">Anatomy of an ODIN-fire application</h1>
+            <p>The demo application included in this repository shows the typical components that are required to integrate
+            a new external data source - in this case the <a href="https://delphiretech.com/sentinel">Sentinel</a> powerline monitoring system from <a href="https://delphiretech.com/">Delphire</a>.</p>
+            <p>What we import here is raw data. If an external service provides data in a generic display or
+            domain-aware format (such as KML or GeoJSON) we do not have to program anything but can use existing RACE/ODIN
+            components in order to incorporate such layers in our visualization. However, using generic display formats can
+            make it considerably harder to add specific visualization or non-visualization related functions such as monitoring.</p>
+            <p>The three basic functions for raw data integration are (1) data import, (2) internal data model and (3) data processing.
+            Each of these functions is implemented as a <a href="http://nasarace.github.io/race/design/actors.html">RACE_actor</a> that can make use of the existing RACE libraries. The sources
+            can be found in the <code>src/main/scala/gov/nasa/race/odin/sentinel/</code> directory.</p>
+            <p><img class="center scale75" src="images/sentinel-app.svg" alt="ODIN node"></p>
+            <p><strong>(1) Data import</strong></p>
+            <p>This is the component that obtains data from the external (edge) server, either through http, a higher level
+            protocol such as Java Messaging Service (JMS), or by direct socket communication. Please refer to <a href="http://nasarace.github.io/race/design/connectivity.html">RACE_import</a>
+            documentation for general design and supported protocols. In many cases all that is required in order to use
+            existing RACE components is to provide a <em class="title-reference">reader</em> that de-serializes the data received from the external server
+            into update events.</p>
+            <p>A standout feature of RACE is that it supports to archive what we receive, and then to later-on replay such archives
+            without requiring to access the external servers that data came from. This makes use of RACEs <a href="http://nasarace.github.io/race/design/archive-replay.html">Archive_and_Replay</a>
+            infrastructure. Replay provides control over start-time and time-scale. The important aspect here is that the only
+            application change that is required is to swap the live import actor for a respective replay actor - the rest of the
+            system stays the same.</p>
+            <p>In our example we replay an archive of simulated Sentinel devices (<code>SentinelReplayActor.scala</code>).</p>
+            <p><strong>(2) Internal Data Model</strong></p>
+            <p>This actor reads the  update events we receive from the import actor and accumulates them into an internal
+            data model representing the states of known Sentinel devices. Upon startup, the actor tries to retrieve the
+            last known state of these devices from local storage. During operation and upon termination this local
+            storage is updated so that connectivity loss does not lead to loosing the last known state. This actor
+            typically first updates the data model and then emits a snapshot of the complete state, followed by the update
+            events that lead to the new state snapshot. This allows clients such as monitor actors to efficiently react
+            to specific state changes.</p>
+            <p>The sources implementing our example data model are <code>Sentinel.scala</code>, <code>SentinelSensorReading.scala</code> and
+            <code>SentinelUpdateActor.scala</code>. </p>
+            <p><strong>(3) Data Processing</strong></p>
+            <p>This represents what to do with the accumulated data and respective changes. In our example we provide
+            the Sentinel data as a micro-service that can be shown as a layer on top of a virtual globe in a browser.
+            While this involves a lot of functionality the vast majority resides in RACE&#39;s <a href="http://nasarace.github.io/race/design/http-server.html">HttpServer</a> infrastructure.
+            Here we just have to implement the <code>RaceRouteInfo</code> that deals with the Sentinel specifics, namely </p>
+            <ul>
+              <li>providing related document fragments (user interface components)</li>
+              <li>serving related assets (such as symbols and browser script modules)</li>
+              <li>pushing new Sentinel data through websockets to the connected clients</li>
+            </ul>
+            <p>In our example this can be found in <code>SentinelRoute.scala</code>.</p>
+        </div>
+
+    </body>
+</html>

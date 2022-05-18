@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-slides-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="slidecounter" id="counter">0 / 0</div>
+        <div class="stopwatch" id="timer">00:00</div>
+        <div class="slide title">
+            <!-- additional divs inserted by renderer extension -->
+            <h1 id="odin-fire" class="title">ODIN-fire</h1>
+            <p>Open Data Integration Framework for Wildland Fire Management</p>
+            <p>website: <a href="https://nasarace.github.io/race">https://nasarace.github.io/race</a>  or <a href="../index.html">local</a><br/>
+            repository: <a href="https://github.com/nasarace/race">https://github.com/nasarace/race</a><br/></p>
+            <p class="author">
+            Peter.C.Mehlitz@nasa.gov<br/>
+            NASA Ames Research Center
+            </p>
+            <table class="keys">
+            <tr><td class="align-right">next slide:</td>   <td class="align-left">enter,spc,pgDown</td></tr>
+            <tr><td class="align-right">prev slide:</td>   <td class="align-left">sh+enter,pgUp</td></tr>
+            <tr><td class="align-right">goto slide:</td>   <td class="align-left">[ctrl-digit] digit</td></tr>
+            <tr><td class="align-right">toggle timer:</td> <td class="align-left">t</td></tr>
+            <tr><td class="align-right">fullscreen:</td>   <td class="align-left">f</td></tr>
+            </table>
+            </div><div class="slide"><h2 id="slides" class="section">Slides</h2>
+            <ul class="nav-list">
+              <li class="level1 active"><a href="#">ODIN-fire</a></li>
+              <li class="level2"><a href="#slides">Slides</a></li>
+              <li class="level2"><a href="#historical-roots-of-odin">Historical Roots of ODIN?</a></li>
+              <li class="level2"><a href="#odin-foundation-actor-programming-model">ODIN Foundation: Actor Programming Model</a></li>
+              <li class="level2"><a href="#odin-implementation-actor-system">ODIN Implementation: Actor System</a></li>
+              <li class="level2"><a href="#odin-application-design">ODIN Application Design</a></li>
+              <li class="level2"><a href="#example-data-diversity-and-volumne">Example: Data Diversity and Volumne</a></li>
+              <li class="level2"><a href="#wildland-fire-management-application-current">Wildland Fire Management Application - Current</a></li>
+              <li class="level2"><a href="#wildland-fire-management-application-vision">Wildland Fire Management Application - Vision</a></li>
+              <li class="level2"><a href="#why-open-source">Why Open Source?</a></li>
+              <li class="level2"><a href="#example-multi-sensor-data-integration">Example - Multi-Sensor Data Integration</a></li>
+              <li class="level2"><a href="#sentinel-sensor">Sentinel Sensor</a></li>
+              <li class="level2"><a href="#tracking">Tracking</a></li>
+            </ul>
+            </div><div class="slide"><h2 id="historical-roots-of-odin" class="section">Historical Roots of ODIN?</h2>
+            <ul>
+              <li>
+                <p>started as a distributed LVC simulation framework in 2015
+                <img src="../images/lvc-sim.svg" class="center scale35"/></p>
+              </li>
+              <li>
+                <p>evolved into a general framework for event driven concurrent/distributed applications:</p>
+                <ul>
+                  <li>can import/export from/to external systems - <strong>connectivity</strong></li>
+                  <li>can process high event rate and data volume - <strong>scalability</strong></li>
+                  <li>supports distributed and massively concurrent operation</li>
+                  <li>has batteries included (except Java runtime, SBT build system)</li>
+                </ul>
+              </li>
+            </ul>
+            </div><div class="slide"><h2 id="odin-foundation-actor-programming-model" class="section">ODIN Foundation: Actor Programming Model</h2>
+            <ul>
+              <li>well known concurrency programming model since 1973 (Hewitt et al)</li>
+              <li><em>Actors</em> are objects that communicate only through async messages
+              ⟹ no shared state</li>
+              <li>objects process messages one-at-a-time ⟹ sequential code</li>
+            </ul>
+            <img src="../images/actor.svg" class="center scale55"/>
+            </div><div class="slide"><h2 id="odin-implementation-actor-system" class="section">ODIN Implementation: Actor System</h2>
+            <ul>
+              <li>runs on JVM, programmed in Scala using Akka actor library</li>
+              <li>ODIN node = set of communicating actors</li>
+              <li>ODIN messages are sent through (logical) publish/subscribe <strong>channels</strong></li>
+              <li>ODIN actors/channels are runtime configured (JSON), not hardwired</li>
+            </ul>
+            <img src="../images/race-design.svg" class="center scale45"/>
+            </div><div class="slide"><h2 id="odin-application-design" class="section">ODIN Application Design</h2>
+            <ul>
+              <li>uniform design - everything is an actor</li>
+              <li>toplevel actors are deterministically created, initialized and terminated
+              by <em>Master</em> actor</li>
+              <li>actors communicate through (configured) bus channels</li>
+            </ul>
+            <img src="../images/race-overview-2.svg" class="center scale55"/>
+            </div><div class="slide"><h2 id="example-data-diversity-and-volumne" class="section">Example: Data Diversity and Volumne</h2>
+            <ul>
+              <li>live NAS visualization plus local sensors</li>
+              <li>imports SWIM messages (SFDPS,TFM-DATA,TAIS,ASDE-X,ITWS) and local ADS-B</li>
+              <li>up to 1000 msg/sec, 4500 simultaneous flights</li>
+              <li>RaceViewerActor uses embedded NASA WorldWind for geospatial display</li>
+            </ul>
+            <div>
+              <img src="../images/swim-sbs-all-ww.svg" class="left scale45"/>
+              <img src="../images/race-nas.png" class="right scale45"/>
+            </div>
+            <p>
+            <div class="run">1: ./race --vault ../conf config/air/swim-all-sbs-ww.conf</div>
+            <div class="run">1: ./race -Darchive=../data/all-080717-1744 config/air/swim-all-sbs-replay-ww.conf</div>
+            </p>
+            </div><div class="slide"><h2 id="wildland-fire-management-application-current" class="section">Wildland Fire Management Application - Current</h2>
+            <ul>
+              <li>fragmented: <em>&quot;..have to hop between 14 different websites to create morning briefing..&quot;</em></li>
+              <li>no single view across stakeholder-specific external (edge) services and own tracking / sensors</li>
+            </ul>
+            <img src="../images/odin-current.svg" class="center scale80"/>
+            </div><div class="slide"><h2 id="wildland-fire-management-application-vision" class="section">Wildland Fire Management Application - Vision</h2>
+            <ul>
+              <li>ODIN node = data integration hub as field deployable server</li>
+              <li>provides task-specific view across various input sources (layers)</li>
+            </ul>
+            <p><img src="../images/odin-node.svg" class="center scale70"/>
+            <div class="run">1: ./race --vault ../conf config/cesium/cesium-app.conf</div><a class="srv" href="http://localhost:9000/app"></a></p>
+            </div><div class="slide"><h2 id="why-open-source" class="section">Why Open Source?</h2>
+            <ul>
+              <li><em>community</em> is larger than fire agencies (&gt;600)</li>
+              <li>provide common ground with low barrier of entry for stakeholders, vendors and research orgs</li>
+            </ul>
+            <img src="../images/odin-open.svg" class="center scale70"/>
+            </div><div class="slide"><h2 id="example-multi-sensor-data-integration" class="section">Example - Multi-Sensor Data Integration</h2>
+            <ul>
+              <li>collaboration with Delphire to integrate their Sentinel fire sensors</li>
+              <li>provides visual, infrared and gas sensor readings along power lines</li>
+              <li>good to correlate with other inputs such as satellite based IR (VIIRS)</li>
+            </ul>
+            <img src="../images/odin-sentinel-viirs.svg" class="center scale60"/>
+            </div><div class="slide"><h2 id="sentinel-sensor" class="section">Sentinel Sensor</h2>
+            <ul>
+              <li>import of Sentinel Sensor Records (JSON) from Delphire&#39;s edge server</li>
+              <li>archive/replay with standard RACE infrastructure</li>
+              <li>visualization through SentinelRoute (HttpServer actor)</li>
+            </ul>
+            <img src="../images/sentinel.svg" class="center scale50"/>
+            </div><div class="slide"><h2 id="tracking" class="section">Tracking</h2>
+            <img src="../images/odin-tracking.svg" class="center scale70"/>
+        </div>
+    </body>
+
+    <script src="./race-slides.js"></script>
+</html>

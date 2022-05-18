@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Vision</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation</a></li>
+                  <li class="level2 active"><a href="#">Vision</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="demo.html">Building and running the demo application</a></li>
+                  <li class="level3"><a href="demo.html#how-to-install-and-build-prerequisites-and-components">How to install and build prerequisites and components</a></li>
+                  <li class="level3"><a href="demo.html#how-to-run-the-race-odin-demo">How to run the RACE-ODIN demo</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="vision" class="title">Vision</h1>
+            <p>The central goal of ODIN-fire is to enable efficient integration of various wildland fire related data sources into 
+            task- and stakeholder- specific applications.</p>
+            <p><img class="center scale70" src="images/odin-node.svg" alt="ODIN node"></p>
+            <p>Such data sources predominantly come from existing services on the internet (e.g. weather and satellite data, imported
+            from so called &quot;<em>edge servers</em>&quot;) but can also include dynamic (realtime) data that is generated within the the stakeholder
+            network (such as tracking information).</p>
+            <p>Since ODIN-fire applications are inherently distributed we call the machines running them <em>ODIN Nodes</em>. Those
+            can be dedicated or shared machines - ODIN-fire can run on all major operating systems and hardware architectures, on servers 
+            or desktops. This is important so that ODIN nodes can be deployed within the stakeholder network, to make applications robust 
+            against (temporary) loss of internet connectivity and to avoid that sensitive data such as tracking information has to leave 
+            the stakeholder premises.</p>
+            <p>ODIN-fire applications might often just visualize the integrated data in a user-controlled way. This in itself can
+            already be a significant improvement if it allows the user to see the right information in the right context, avoiding
+            the &quot;too much and not enough&quot; effect or the need to frequently switch between different web pages. 
+            ODIN-fire&#39;s primary way to visualize data is through a browser so that only one ODIN node has to run within the
+            stakeholder network and users can access the data without having to install anything on their devices. This is not the only
+            way to view data. ODIN-fire applications can also connect to apps running on mobile devices or run on local desktops (i.e.
+            without running a web server). </p>
+            <p> </p>
+            <p><img class="center scale60" src="images/odin-demo.png" alt="ODIN demo app"></p>
+            <p> </p>
+            <p>ODIN-fire applications can do much more. The imported data can be automatically processed. This can include potential functions to</p>
+            <ul>
+              <li>automatically monitor data for alert conditions</li>
+              <li>combine different sensor channels to reduce false positives/negatives</li>
+              <li>provide alternative visualization (e.g. dynamic wind fields)</li>
+              <li>send reports to other agencies/organizations (containment, fire perimeters etc.)</li>
+            </ul>
+            <p> </p>
+            <p><img class="center scale60" src="images/odin-sentinel-viirs.svg" alt="monitoring example"></p>
+            <p> </p>
+            <p>Since ODIN-fire is built on top of RACE it supports communication between ODIN nodes. This allows to map organizational
+            structures such as the wildland fire Incident Command System (ICS) to a network of ODIN nodes with different, role-specific
+            applications.</p>
+        </div>
+
+    </body>
+</html>

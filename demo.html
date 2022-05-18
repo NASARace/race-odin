@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Building and running the demo application</a></li>
+                  <li class="level2"><a href="#how-to-install-and-build-prerequisites-and-components">How to install and build prerequisites and components</a></li>
+                  <li class="level2"><a href="#how-to-run-the-race-odin-demo">How to run the RACE-ODIN demo</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation</a></li>
+                  <li class="level2"><a href="vision.html">Vision</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2 active"><a href="#">Building and running the demo application</a></li>
+                  <li class="level3"><a href="#how-to-install-and-build-prerequisites-and-components">How to install and build prerequisites and components</a></li>
+                  <li class="level3"><a href="#how-to-run-the-race-odin-demo">How to run the RACE-ODIN demo</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="building-and-running-the-demo-application" class="title">Building and running the demo application</h1>
+            
+            <h3 id="how-to-install-and-build-prerequisites-and-components" class="section"><a class="anchor-link left" href="#how-to-install-and-build-prerequisites-and-components"><i class="icofont-laika">&#xef71;</i></a>How to install and build prerequisites and components</h3>
+            <p>If this is the first time you install RACE or RACE-ODIN you have to get a number of prerequisites. Eventually just
+            updating and building this repository will be required. </p>
+            <p>Please note that <code>race-odin</code> at this time (04/2022) does require to fetch and locally publish the underlying RACE 
+            repository although we do publish binary RACE artifacts on mvnrepository.com and hence RACE will be just a normal 
+            managed dependency for <code>race-odin</code> once it&#39;s ODIN related components have stabilized.</p>
+            
+            <h4 id="_1-install-a-recent-java-jdk" class="section"><a class="anchor-link left" href="#_1-install-a-recent-java-jdk"><i class="icofont-laika">&#xef71;</i></a>(1) install a recent Java JDK</h4>
+            <p>This should be a JDK version &gt; 11 (tested with JDK 18), e.g. from <a href="https://openjdk.java.net/">OpenJDK</a>.
+            Please note the JDK can be installed within the user file system by extracting the downloaded archive and 
+            adding its <code>bin/</code> directory to the <code>PATH</code> environment variable.</p>
+            
+            <h4 id="_2-install-the-sbt-build-tool" class="section"><a class="anchor-link left" href="#_2-install-the-sbt-build-tool"><i class="icofont-laika">&#xef71;</i></a>(2) install the SBT build tool</h4>
+            <p>Please visit the  <a href="https://www.scala-sbt.org/download.html">SBT download page</a> for instructions of how to download
+            and install the SBT build tool. If there is no suitable package for your operating system obtain the generic *.zip archive,
+            unpack and add its <code>bin/</code> directory to the <code>PATH</code> (SBT is Java based).</p>
+            
+            <h4 id="_3-make-sure-git-and-the-git-lfs-extension-are-installed-on-your-system" class="section"><a class="anchor-link left" href="#_3-make-sure-git-and-the-git-lfs-extension-are-installed-on-your-system"><i class="icofont-laika">&#xef71;</i></a>(3) make sure GIT and the Git LFS extension are installed on your system</h4>
+            <p>If the Git version control system is not installed on your system, please visit the 
+            <a href="https://git-scm.com/downloads">Git download page</a> for instructions.</p>
+            <p>If you don&#39;t have Git-LFS installed (the Git extension to handle large binary files), please follow instructions on
+            the <a href="https://git-lfs.github.com">Git LFS</a> page. Please do not forget to run <code>git lfs install</code> after installation.</p>
+            
+            <h4 id="_4-create-a-common-root-directory-for-race-repositories" class="section"><a class="anchor-link left" href="#_4-create-a-common-root-directory-for-race-repositories"><i class="icofont-laika">&#xef71;</i></a>(4) create a common root directory for RACE repositories</h4>
+            <p>While not strictly required it is recommended to keep all RACE related projects under a common root directory, e.g.</p>
+            <pre><code>mkdir race-root
+cd race-root</code></pre>
+            
+            <h4 id="_5-obtain-and-build-race" class="section"><a class="anchor-link left" href="#_5-obtain-and-build-race"><i class="icofont-laika">&#xef71;</i></a>(5) obtain and build RACE</h4>
+            <p>(a) Obtain RACE:</p>
+            <pre><code>git clone https://github.com/NASARace/race</code></pre>
+            <p>(b) build RACE:</p>
+            <pre><code>cd race
+sbt publishLocal</code></pre>
+            <p>Please note that if you subsequently update RACE from its github repository you also need to rebuild RACE-ODIN. If
+            the RACE version has not changed this requires to run <code>sbt clean stage</code> to build RACE-ODIN so that it picks up the
+            new RACE binaries.</p>
+            
+            <h4 id="_6-obtain-a-cesium-access-token" class="section"><a class="anchor-link left" href="#_6-obtain-a-cesium-access-token"><i class="icofont-laika">&#xef71;</i></a>(6) obtain a Cesium access token</h4>
+            <p>The RACE-ODIN demonstration uses the open source <a href="https://cesium.com/platform/cesiumjs/">CesiumJS</a> virtual globe for
+            browser based visualization. In order to properly initialize some of the Cesium functions used by ODIN you need to obtain
+            a <em>cesium access token</em>. Please follow instructions on the <a href="https://cesium.com/learn/cesiumjs-learn/cesiumjs-quickstart/#step-1-create-an-account-and-get-a-token">CesiumJS tutorial</a>
+            page.</p>
+            
+            <h4 id="_7-create-a-race-vault" class="section"><a class="anchor-link left" href="#_7-create-a-race-vault"><i class="icofont-laika">&#xef71;</i></a>(7) create a RACE vault</h4>
+            <p>RACE is using a separate (optionally) <a href="http://nasarace.github.io/race/usage/encryption.html">encrypted configuration</a>) file
+            (known as the <em>vault</em>) to store sensitive configuration values outside of repositories. For our demo purposes we can 
+            create a single, un-encrytped <code>cesium-vault</code> text file in the RACE root directory created in step (4):</p>
+            <pre><code>secret {
+  cesium {
+    access-token=&quot;&lt;your-cesium-access-token&gt;&quot;
+  }
+}</code></pre>
+            
+            <h4 id="_8-obtain-and-build-race-odin" class="section"><a class="anchor-link left" href="#_8-obtain-and-build-race-odin"><i class="icofont-laika">&#xef71;</i></a>(8) obtain and build RACE-ODIN</h4>
+            <p>Within your RACE root directory execute:</p>
+            <pre><code>git clone https://github.com/NASARace/race-odin
+cd race-odin
+sbt stage</code></pre>
+            
+            <h4 id="_9-obtain-race-data" class="section"><a class="anchor-link left" href="#_9-obtain-race-data"><i class="icofont-laika">&#xef71;</i></a>(9) obtain RACE-DATA</h4>
+            <p>Since RACE archives for test data can get quite large we keep them outside of RACE or ODIN in a separate <code>race-data</code>
+            repository. Make sure you have the git-lfs extension installed and initialized (see step (3)) and execute in the
+            RACE root directory</p>
+            <pre><code>git clone https://github.com/NASARace/race-data</code></pre>
+            <p>There is no need to build anything since this repository only contains data archives. You should now have the following
+            directory structure:</p>
+            <pre><code>race-root/
+    cesium-vault
+    race/
+    race-data/
+    race-odin/</code></pre>
+            
+            <h3 id="how-to-run-the-race-odin-demo" class="section"><a class="anchor-link left" href="#how-to-run-the-race-odin-demo"><i class="icofont-laika">&#xef71;</i></a>How to run the RACE-ODIN demo</h3>
+            <p>from within the <code>race-odin</code> directory execute</p>
+            <pre><code>./odin --vault ../cesium-vault config/odin-demo.conf</code></pre>
+            <p>This should start the ODIN server and eventually display a command line menu:</p>
+            <pre><code>enter command [1:show universes, 2:show actors, 3:show channels, 4:send message, 5:set loglevel, 6:app menu, 7: pause/resume, 8:start, 9:exit]</code></pre>
+            <p>The menu can always be obtained by hitting <enter>. To terminate the server, use &#39;9&#39; + <enter>. </p>
+            <p>Once the server is running, switch to a browser (Chrome has the best support for OpenGL as of this writing) and
+            go to <code>http://localhost:9000/odin</code>. This should show the globe and automatically zoom in on the San Francisco Bay Area,
+            showing local aircraft movements as yellow symbols, a red GPS ground track, and green Sentinel sensors.</p>
+            <p>The first time you start the demo will be considerably slower since RACE has to retrieve and cache external (proxied) data.</p>
+            <p>Please note that RACE uses a configured cache directory for proxied content - see <code>cache-dir</code> setting in 
+            <code>config/odin-demo.conf</code> which sets this to <code>../cache</code> (i.e. it should reside under your race root dir). Since this
+            directory is used to store content such as map tiles it can get big. This cache has to be reset/deleted manually if you
+            don&#39;t use <code>race-odin</code> anymore.</p>
+        </div>
+
+    </body>
+</html>
