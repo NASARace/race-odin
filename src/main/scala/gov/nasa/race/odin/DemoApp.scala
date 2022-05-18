@@ -21,7 +21,7 @@ import gov.nasa.race.cesium.{CesiumBldgRoute, CesiumGpsRoute, CesiumLayerRoute, 
 import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute}
 import gov.nasa.race.ui.UiSettingsRoute
-
+import gov.nasa.race.odin.sentinel.SentinelRoute
 
 /**
  * the aggregation of micro-services we provide under the configured URL

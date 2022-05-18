@@ -1,8 +1,9 @@
 // example build configuration for projects using RACE
 
-
 name := "race-odin"
 scalaVersion := "2.13.8"
+
+enablePlugins(LaikaPlugin) // optional - to generate website and slides
 
 // those settings are not RACE specific but recommended when running applications from within a SBT shell
 
@@ -16,6 +17,8 @@ lazy val root = (project in file(".")).
     run / Keys.connectInput := true,
     Test / fork := true,
     outputStrategy := Some(StdoutOutput),
+    PluginSettings.pluginSettings,
+    commands ++= LaikaCommands.commands,
     libraryDependencies ++= Seq(
       "gov.nasa.race" %% "race-core" % raceVersion,
       "gov.nasa.race" %% "race-air" % raceVersion,

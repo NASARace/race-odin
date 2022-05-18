@@ -1,9 +1,10 @@
 ## RACE-ODIN
 
 The purpose of this project is to show how to build Open Data Integration (ODIN) applications with 
-[RACE](http://nasarace.github.io/race/) in the context of  wildland fire management. It specifically serves as a 
-template to demonstrate how to add components (actors and supporting code) outside of the RACE code base, using
-[Delphire Sentinel](https://delphiretech.com/sentinel) powerline fire sensors as the integration example. 
+[RACE](http://nasarace.github.io/race/). It specifically serves as a template to demonstrate how to add components 
+(actors and supporting code) outside of the RACE code base. 
+
+More information is available on the [RACE-ODIN website](http://NASARace.github.io/race-odin).
 
 ### How to install and build prerequisites and components
 If this is the first time you install RACE or RACE-ODIN you have to get a number of prerequisites. Eventually just
@@ -46,10 +47,9 @@ While not strictly required it is recommended to keep all RACE related projects 
     cd race
     sbt publishLocal
 
-If this step is repeated and the RACE version has not changed please explicitly remove locally cached RACE
-artifacts (*.jar files) before running `publishLocal`:
-
-    rm -rf ~/.ivy2/local/gov.nasa.race
+Please note that if you subsequently update RACE from its github repository you also need to rebuild RACE-ODIN. If
+the RACE version has not changed this requires to run `sbt clean stage` to build RACE-ODIN so that it picks up the
+new RACE binaries.
 
 #### (6) obtain a Cesium access token
 The RACE-ODIN demonstration uses the open source [CesiumJS](https://cesium.com/platform/cesiumjs/) virtual globe for

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="${laika.rootPath}/race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="${laika.rootPath}/index.html" ><img class="logo" src="${laika.rootPath}/images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                @:navigationTree {
+                    entries = [ { target = "#", depth = 2 } ]
+                }
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                @:navigationTree { entries = [ { target = "/", depth = 3 } ] }
+            </div>
+        </div>
+
+        <div class="main">
+            ${cursor.currentDocument.content}
+        </div>
+
+    </body>
+</html>
