@@ -82,6 +82,8 @@ trait SentinelSensorReading extends Dated with JsonSerializable {
       }
     }
   }
+
+  def copyWithDate(newDate: DateTime): SentinelSensorReading
 }
 
 /**
@@ -106,6 +108,8 @@ case class SentinelGpsReading (deviceId: Int, sensorNo: Int, date: DateTime, lat
     w.writeDoubleMember(LAT, lat.toDegrees)
     w.writeDoubleMember(LON, lon.toDegrees)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelGpsReading = copy(date = newDate)
 }
 
 /**
@@ -146,6 +150,8 @@ case class SentinelGyroReading (deviceId: Int, sensorNo: Int, date: DateTime, gx
     w.writeDoubleMember(GY, gy)
     w.writeDoubleMember(GZ, gz)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelGyroReading = copy(date = newDate)
 }
 
 /**
@@ -189,6 +195,8 @@ case class SentinelMagReading (deviceId: Int, sensorNo: Int, date: DateTime, mx:
     w.writeDoubleMember(MY, my)
     w.writeDoubleMember(MZ, mz)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelMagReading = copy(date = newDate)
 }
 
 /**
@@ -232,6 +240,8 @@ case class SentinelAccelReading (deviceId: Int, sensorNo: Int, date: DateTime, a
     w.writeDoubleMember(AY, ay)
     w.writeDoubleMember(AZ, az)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelAccelReading = copy(date = newDate)
 }
 /**
  * parses value 'null' or:
@@ -275,6 +285,8 @@ case class SentinelGasReading (deviceId: Int, sensorNo: Int, date: DateTime, gas
     w.writeDoubleMember(PRESS, pressure)
     w.writeDoubleMember(ALT, alt)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelGasReading = copy(date = newDate)
 }
 
 /**
@@ -319,6 +331,8 @@ case class SentinelThermoReading (deviceId: Int, sensorNo: Int, date: DateTime, 
     w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(TEMP, temp.toCelsius)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelThermoReading = copy(date = newDate)
 }
 
 /**
@@ -355,6 +369,8 @@ case class SentinelVocReading (deviceId: Int, sensorNo: Int, date: DateTime, tvo
     w.writeIntMember(TVOC, tvoc)
     w.writeIntMember(ECO2, eco2)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelVocReading = copy(date = newDate)
 }
 
 /**
@@ -394,6 +410,8 @@ case class SentinelAnemoReading(deviceId: Int, sensorNo: Int, date: DateTime, di
     w.writeDoubleMember(ANGLE, dir.toDegrees)
     w.writeDoubleMember(SPD, spd.toMetersPerSecond)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelAnemoReading = copy(date = newDate)
 }
 
 /**
@@ -432,6 +450,8 @@ case class SentinelFireReading (deviceId: Int, sensorNo: Int, date: DateTime, pr
     w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(PROB, prob)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelFireReading = copy(date = newDate)
 }
 
 /**
@@ -469,6 +489,8 @@ case class SentinelCameraReading (deviceId: Int, sensorNo: Int, date: DateTime, 
     w.writeStringMember(PATH,path)
     w.writeLongMember(RECORD_ID,recordId)
   }
+
+  def copyWithDate(newDate: DateTime): SentinelCameraReading = copy(date = newDate)
 }
 
 /**

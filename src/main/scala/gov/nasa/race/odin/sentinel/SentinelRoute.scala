@@ -59,9 +59,9 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   var sentinels: SentinelSet = SentinelSet(Map.empty[Int,Sentinel])
   var sentinelsMsg: Option[TextMessage.Strict] = None
 
-  val sentinelDir = config.getString("sentinel-dir")
+  val sentinelDir = config.getString("sentinel.dir")
   val sentinelAssets = Map.from(
-    config.getKeyValuePairsOrElse("sentinel-assets",
+    config.getKeyValuePairsOrElse("sentinel.assets",
       Seq(("sentinel","sentinel-sym.png"), ("fire","fire.png"))
     )
   )
@@ -108,16 +108,16 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   }
 
   def sentinelConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
-    val labelOffsetX = config.getIntOrElse("sentinel-label-offset.x", 8)
-    val labelOffsetY = config.getIntOrElse("sentinel-label-offset.y", 0)
+    val labelOffsetX = config.getIntOrElse("sentinel.label-offset.x", 8)
+    val labelOffsetY = config.getIntOrElse("sentinel.label-offset.y", 0)
 
-    s"""
-      export const sentinelColor = Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinel-color", "chartreuse")}');
-      export const sentinelAlertColor = Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinel-alert-color", "deeppink")}');
-      export const sentinelLabelOffset = new Cesium.Cartesian2( $labelOffsetX, $labelOffsetY);
-      export const sentinelBillboardDC = new Cesium.DistanceDisplayCondition( 0, 200000);
-      export const sentinelImageWidth = ${config.getIntOrElse("sentinel-img-width", 400)};
-      """
+    s"""export const sentinel = {
+  color: Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinel.color", "chartreuse")}'),
+  alertColor: Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinel.alert-color", "deeppink")}'),
+  labelOffset: new Cesium.Cartesian2( $labelOffsetX, $labelOffsetY),
+  billboardDC: new Cesium.DistanceDisplayCondition( 0, 200000),
+  imageWidth: ${config.getIntOrElse("sentinel.img-width", 400)},
+};"""
     //... and more to follow
   }
 

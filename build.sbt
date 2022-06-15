@@ -24,6 +24,8 @@ lazy val root = (project in file(".")).
       "gov.nasa.race" %% "race-air" % raceVersion,
       "gov.nasa.race" %% "race-client-ui" % raceVersion,
       "gov.nasa.race" %% "race-cesium" % raceVersion,
-      "gov.nasa.race" %% "race-net-http" % raceVersion
+      "gov.nasa.race" %% "race-net-http" % raceVersion,
+      "gov.nasa.race" %% "race-tools" % raceVersion,
+      "gov.nasa.race" %% "race-testkit" % raceVersion % Test
     )
   )

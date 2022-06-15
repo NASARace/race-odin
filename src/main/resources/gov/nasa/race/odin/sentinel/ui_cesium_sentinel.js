@@ -24,7 +24,6 @@ import * as util from "./ui_util.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
-const FIRE = "⚠︎"
 
 var sentinelDataSource = new Cesium.CustomDataSource("sentinel");
 var sentinelView = undefined;
@@ -59,7 +58,6 @@ class SentinelEntry {
         if (this.sentinel.fire) {
             if (this.sentinel.fire.fireProb > 0.5) {
                 return ui.createImage("sentinel-asset/fire");
-                //return FIRE;
             }
         }
         return "";
@@ -148,7 +146,7 @@ function toggleShowImage(event) {
                         e.window = undefined;
                         ui.updateListItem(sentinelImagesView, e);
                     });
-                    let img = ui.createImage(e.filename, "waiting for image..", config.sentinelImageWidth);
+                    let img = ui.createImage(e.filename, "waiting for image..", config.sentinel.imageWidth);
                     ui.addWindowContent(w, img);
                     //ui.setWindowResizable(w, true);
                     ui.addWindow(w);
@@ -267,7 +265,7 @@ function checkFireAsset(e) {
 
     if (sentinel.fire && sentinel.fire.fireProb > 0.5) {
         if (e.assets) {
-            e.assets.symbol.billboard.color = config.sentinelAlertColor;
+            e.assets.symbol.billboard.color = config.sentinel.alertColor;
 
             if (!e.assets.fire) {
                 e.assets.fire = createFireAsset(e);
@@ -294,8 +292,8 @@ function createSymbolAsset(sentinelEntry) {
         position: Cesium.Cartesian3.fromDegrees(sentinel.gps.longitude, sentinel.gps.latitude),
         billboard: {
             image: 'sentinel-asset/sentinel',
-            distanceDisplayCondition: config.sentinelBillboardDC,
-            color: config.sentinelColor,
+            distanceDisplayCondition: config.sentinel.billboardDC,
+            color: config.sentinel.color,
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
         },
         label: {
@@ -303,12 +301,12 @@ function createSymbolAsset(sentinelEntry) {
             scale: 0.8,
             horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
             verticalOrigin: Cesium.VerticalOrigin.TOP,
-            font: config.trackLabelFont,
-            fillColor: config.sentinelColor,
+            font: config.track.labelFont,
+            fillColor: config.sentinel.color,
             showBackground: true,
-            backgroundColor: config.trackLabelBackground,
-            pixelOffset: config.sentinelLabelOffset,
-            distanceDisplayCondition: config.sentinelBillboardDC,
+            backgroundColor: config.track.abelBackground,
+            pixelOffset: config.sentinel.labelOffset,
+            distanceDisplayCondition: config.sentinel.billboardDC,
         }
     });
     entity._uiSentinelEntry = sentinelEntry; // backlink
@@ -323,7 +321,7 @@ function createDetailAsset(sentinelEntry) {
 
     let entity = new Cesium.Entity({
         id: sentinel.deviceId + "-details",
-        distanceDisplayCondition: config.sentinelBillboardDC,
+        distanceDisplayCondition: config.sentinel.billboardDC,
         position: Cesium.Cartesian3.fromDegrees(sentinel.gps.longitude, sentinel.gps.latitude),
         ellipse: {
             semiMinorAxis: 500,
@@ -343,7 +341,7 @@ function createFireAsset(sentinelEntry) {
 
     let entity = new Cesium.Entity({
         id: sentinel.deviceId + "-fire",
-        distanceDisplayCondition: config.sentinelBillboardDC,
+        distanceDisplayCondition: config.sentinel.billboardDC,
         position: Cesium.Cartesian3.fromDegrees(sentinel.gps.longitude - 0.002, sentinel.gps.latitude - 0.002, 0),
         ellipse: {
             semiMinorAxis: 25,
@@ -364,7 +362,6 @@ ui.exportToMain(function selectSentinel(event) {
     if (e) {
         selectedSentinelEntry = e;
         let sentinel = e.sentinel;
-        console.log(JSON.stringify(sentinel));
         setDataFields(sentinel);
         setImagesView(sentinel);
     }
