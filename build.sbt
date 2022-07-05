@@ -27,5 +27,6 @@ lazy val root = (project in file(".")).
       "gov.nasa.race" %% "race-net-http" % raceVersion,
       "gov.nasa.race" %% "race-tools" % raceVersion,
       "gov.nasa.race" %% "race-testkit" % raceVersion % Test
-    )
+    ),
+    resolvers += "unidata" at "https://artifacts.unidata.ucar.edu/repository/unidata-all/"
   )
