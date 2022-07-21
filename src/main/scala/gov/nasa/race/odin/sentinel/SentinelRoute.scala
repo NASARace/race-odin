@@ -60,11 +60,9 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   var sentinelsMsg: Option[TextMessage.Strict] = None
 
   val sentinelDir = config.getString("sentinel.dir")
-  val sentinelAssets = Map.from(
-    config.getKeyValuePairsOrElse("sentinel.assets",
-      Seq(("sentinel","sentinel-sym.png"), ("fire","fire.png"))
-    )
-  )
+  val sentinelAssets = getSymbolicAssetMap("sentinel.assets", config, 
+                                           Seq(("sentinel","sentinel-sym.png"), ("fire","fire.png")))
+  
 
   def getSentinelAssetContent (key: String): Option[HttpEntity.Strict] = {
     sentinelAssets.get(key).map( fileName => getFileAssetContent(fileName))
@@ -80,10 +78,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
     get {
       pathPrefix( "sentinel-asset" ~ Slash) { // mesh-models and images
         extractUnmatchedPath { p =>
-          getSentinelAssetContent(p.toString()) match {
-            case Some(content) => complete(content)
-            case None => complete(StatusCodes.NotFound, p.toString())
-          }
+          completeWithSymbolicAsset(p.toString, sentinelAssets)
         }
       } ~
       pathPrefix("camera" ~ Slash) {

@@ -20,12 +20,15 @@ lazy val root = (project in file(".")).
     PluginSettings.pluginSettings,
     commands ++= LaikaCommands.commands,
     libraryDependencies ++= Seq(
+      "org.slf4j" % "slf4j-simple" % "2.0.0-alpha1",
       "gov.nasa.race" %% "race-core" % raceVersion,
       "gov.nasa.race" %% "race-air" % raceVersion,
       "gov.nasa.race" %% "race-client-ui" % raceVersion,
       "gov.nasa.race" %% "race-cesium" % raceVersion,
       "gov.nasa.race" %% "race-net-http" % raceVersion,
-      "gov.nasa.race" %% "race-tools" % raceVersion,
+      "gov.nasa.race" %% "race-tools" % raceVersion excludeAll(
+        ExclusionRule(organization="ch.qos.logback")
+      ),
       "gov.nasa.race" %% "race-testkit" % raceVersion % Test
     ),
     resolvers += "unidata" at "https://artifacts.unidata.ucar.edu/repository/unidata-all/"
