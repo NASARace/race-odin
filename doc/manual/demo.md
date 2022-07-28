@@ -1,12 +1,12 @@
-# Building and running the demo application
+# Building and Running the RACE-ODIN Demo
 
 ### How to install and build prerequisites and components
-If this is the first time you install RACE or RACE-ODIN you have to get a number of prerequisites. Eventually just
-updating and building this repository will be required. 
+If this is the first time you install RACE or RACE-ODIN you have to get a number of prerequisites. Eventually it will
+be sufficient to just update and build the RACE-ODIN project.
 
-Please note that `race-odin` at this time (04/2022) does require to fetch and locally publish the underlying RACE 
-repository although we do publish binary RACE artifacts on mvnrepository.com and hence RACE will be just a normal 
-managed dependency for `race-odin` once it's ODIN related components have stabilized.
+Please note that RACE-ODIN at this point still requires to fetch and locally publish the underlying RACE 
+repository. Once components will have stabilized we will publish binary RACE artifacts on mvnrepository.com and this
+step can be omitted.
 
 #### (1) install a recent Java JDK
 This should be a JDK version > 11 (tested with JDK 18), e.g. from [OpenJDK](https://openjdk.java.net/).
@@ -41,35 +41,25 @@ While not strictly required it is recommended to keep all RACE related projects 
     cd race
     sbt publishLocal
 
-Please note that if you subsequently update RACE from its github repository you also need to rebuild RACE-ODIN. If
-the RACE version has not changed this requires to run `sbt clean stage` to build RACE-ODIN so that it picks up the
-new RACE binaries.
+To subsequently update RACE run from its directory
 
-#### (6) obtain a Cesium access token
-The RACE-ODIN demonstration uses the open source [CesiumJS](https://cesium.com/platform/cesiumjs/) virtual globe for
-browser based visualization. In order to properly initialize some of the Cesium functions used by ODIN you need to obtain
-a *cesium access token*. Please follow instructions on the [CesiumJS tutorial](https://cesium.com/learn/cesiumjs-learn/cesiumjs-quickstart/#step-1-create-an-account-and-get-a-token)
-page.
+    git pull
+    sbt publishLocal
 
-#### (7) create a RACE vault
-RACE is using a separate (optionally) [encrypted configuration](http://nasarace.github.io/race/usage/encryption.html)) file
-(known as the *vault*) to store sensitive configuration values outside of repositories. For our demo purposes we can 
-create a single, un-encrytped `cesium-vault` text file in the RACE root directory created in step (4):
-
-    secret {
-      cesium {
-        access-token="<your-cesium-access-token>"
-      }
-    }
-
-#### (8) obtain and build RACE-ODIN
-Within your RACE root directory execute:
+#### (6) obtain and build RACE-ODIN
+Within your RACE **root** directory execute:
 
     git clone https://github.com/NASARace/race-odin
     cd race-odin
     sbt stage
 
-#### (9) obtain RACE-DATA
+Please note that if you later-on update RACE you should also rebuild RACE-ODIN. To make sure RACE-ODIN is picking 
+up the new RACE binaries run from within the RACE-ODIN directory:
+
+    git pull
+    sbt clean stage
+
+#### (7) obtain RACE-DATA
 Since RACE archives for test data can get quite large we keep them outside of RACE or ODIN in a separate `race-data`
 repository. Make sure you have the git-lfs extension installed and initialized (see step (3)) and execute in the
 RACE root directory
@@ -87,9 +77,14 @@ directory structure:
 
 
 ### How to run the RACE-ODIN demo
-from within the `race-odin` directory execute
+On Unix/Linux/macOS run in a console from within the `race-odin` directory
 
-    ./odin --vault ../cesium-vault config/odin-demo.conf
+    ./odin config/odin-czu-demo.conf
+
+On Windows run from a command prompt within the 'race-odin' directory
+
+    script/odin.bat config\odin-czu-demo.conf
+
 
 This should start the ODIN server and eventually display a command line menu:
 
@@ -104,6 +99,6 @@ showing local aircraft movements as yellow symbols, a red GPS ground track, and 
 The first time you start the demo will be considerably slower since RACE has to retrieve and cache external (proxied) data.
 
 Please note that RACE uses a configured cache directory for proxied content - see `cache-dir` setting in 
-`config/odin-demo.conf` which sets this to `../cache` (i.e. it should reside under your race root dir). Since this
-directory is used to store content such as map tiles it can get big. This cache has to be reset/deleted manually if you
-don't use `race-odin` anymore.
+`config/*.conf` which sets this to `../cache` (i.e. it should reside under your race root dir). Since this
+directory is used to store content such as map tiles it can consume considerable disk space. Make sure to delete it
+if you don't use RACE or RACE-ODIN anymore.
