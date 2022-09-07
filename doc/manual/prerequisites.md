@@ -1,4 +1,4 @@
-# Check Prerequisites for Building and Running RACE-ODIN
+# Check Prerequisites for RACE-ODIN
 
 If this is the first time you install RACE or RACE-ODIN you have to check or get a number of prerequisites, namely:
 

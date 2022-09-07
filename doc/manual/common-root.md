@@ -1,4 +1,4 @@
-# Create Common Root Directory for RACE/ODIN components
+# Create Common Root Dir for RACE/ODIN
 
 While it is not required it is recommended to put all RACE and RACE-ODIN related projects under a common root directory.
 This not ony pertains to the two projects itself but also to the data and configuration files that are used by them.
