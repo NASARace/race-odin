@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Building and Running Live Data Demo</a></li>
+                  <li class="level2"><a href="#obtain-and-configure-live-data-prerequisites">Obtain and Configure Live Data Prerequisites</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation for RACE-ODIN</a></li>
+                  <li class="level2"><a href="vision.html">Vision behind RACE-ODIN</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2 active"><a href="#">Building and Running Live Data Demo</a></li>
+                  <li class="level2"><a href="archive-demo.html">Building and Running Archive Replay Demo</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
+                  <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
+                  <li class="level2"><a href="common-root.html">Create Common Root Dir for RACE/ODIN</a></li>
+                  <li class="level2"><a href="cesium-access-token.html">Cesium Access Token</a></li>
+                  <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+                  <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
+                  <li class="level2"><a href="prerequisites.html">Check Prerequisites for RACE-ODIN</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="building-and-running-live-data-demo" class="title">Building and Running Live Data Demo</h1>
+            <p>The live-data demo from <code>config/odin-live.conf</code> shows the following input sources</p>
+            <ul>
+              <li>(optional) aircraft (ADS-B) tracking</li>
+            </ul>
+            <ul>
+              <li>fire detection from GOES-R (geostationary) satellites</li>
+            </ul>
+            <ul>
+              <li>fire tracking with JPSS (polar orbiting) satellites</li>
+            </ul>
+            <img class="center scale80" src="images/live-demo.png">
+            <p>To run the demo please follow these steps:</p>
+            <ol class="arabic">
+              <li><a href="prerequisites.html">Check Prerequisites for Building and Running RACE-ODIN</a></li>
+            </ol>
+            <ol class="arabic">
+              <li><a href="common-root.html">Create Common Root Directory for RACE/ODIN components</a> </li>
+            </ol>
+            <ol class="arabic">
+              <li><a href="building-race.html">Obtain and Build RACE</a></li>
+            </ol>
+            <ol class="arabic">
+              <li><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+            </ol>
+            <ol class="arabic">
+              <li><a href="#obtain-and-configure-live-data-prerequisites">Obtain and Configure Live Data Prerequisites</a></li>
+            </ol>
+            <ol class="arabic">
+              <li><a href="#start-odin-live-data-demo">Start ODIN Live Data Demo</a></li>
+            </ol>
+            
+            <h2 id="obtain-and-configure-live-data-prerequisites" class="section"><a class="anchor-link left" href="#obtain-and-configure-live-data-prerequisites"><i class="icofont-laika">&#xef71;</i></a>Obtain and Configure Live Data Prerequisites</h2>
+            <p>The live data demo currently requires access configuration for the following external servers</p>
+            <ul>
+              <li>(optional) ADS-B host</li>
+            </ul>
+            <ul>
+              <li><code>https://space-track.org</code> - to obtain orbit parameters for JPSS satellites</li>
+            </ul>
+            <ul>
+              <li><code>https://firms.modaps.eosdis.nasa.gov</code> - to obtain active fire data products from JPSS satellites</li>
+            </ul>
+            <p>In addition the <a href="https://www.orekit.org/">Orekit</a> library needs ephemeris data to compute orbits of JPSS satellites.</p>
+            
+            <h3 id="configuring-ads-b-flight-tracking-host" class="section"><a class="anchor-link left" href="#configuring-ads-b-flight-tracking-host"><i class="icofont-laika">&#xef71;</i></a>Configuring ADS-B (flight tracking) host</h3>
+            <p>The demo optionally reads flight tracking information from a host that runs the open source <a href="https://github.com/flightaware/dump1090">dump1090</a>
+            demodulator/decoder, which currently builds on Linux and macOS. This decoder requires an antenna and an 
+            <a href="https://flightaware.store/products/pro-stick-plus">SDR (software defined radio) dongle</a>.</p>
+            <p>While there are several options of how to build such a system details are outside the scope of this documentation. Please
+            refer to these <a href="https://flightaware.com/adsb/piaware/build">instructions</a> for details.</p>
+            <p>Once you have access to such a system, configuring RACE-ODIN is just a matter of adding hostname and port to the 
+            &#39;Private Configuration&#39; vault file : </p>
+            <pre><code>secret {
+  ...
+  adsb {
+    host=&quot;&lt;your-adsb-host-url&gt;&quot;
+    port = 30003
+  }
+  ...
+}</code></pre>
+            <p>Since this data source requires more effort the demo considers it optional. If there is no valid adsb.host ODIN
+            will product the following warnings on startup but will otherwise run showing the satellite data.</p>
+            <pre><code>[ERR]  trackImporter: failed to initialize: java.net.ConnectException: Connection refused
+...
+[WARN] odin-live: initialization of trackImporter failed: rejected</code></pre>
+            
+            <h3 id="obtaining-a-space-track-org-account" class="section"><a class="anchor-link left" href="#obtaining-a-space-track-org-account"><i class="icofont-laika">&#xef71;</i></a>Obtaining a space-track.org Account</h3>
+            <p>This website provides access to orbital parameters in form of <a href="https://en.wikipedia.org/wiki/Two-line_element_set">two line elements</a>. Accounts
+            are free and can be obtained from <a href="https://www.space-track.org/auth/createAccount">this page</a>.</p>
+            <p>Once you have the account information add the following to your <a href="private-configuration.html">Private Configuration</a></p>
+            <pre><code>secret {
+  ...
+   spacetrack {
+    authentication=&quot;identity=&lt;your-email&gt;&amp;password=&lt;your-password&gt;&quot;
+  }
+  ...
+}</code></pre>
+            
+            <h3 id="obtaining-a-map-key-from-firms" class="section"><a class="anchor-link left" href="#obtaining-a-map-key-from-firms"><i class="icofont-laika">&#xef71;</i></a>Obtaining a Map Key from FIRMS</h3>
+            <p>In order to retrieve active fire data from polar orbiting satellites you have to obtain a map key from <a href="https://firms.modaps.eosdis.nasa.gov/usfs/api/area/">this page</a>
+            (scroll to the bottom of the page and click the &quot;Get MAP_KEY&quot; button). Keys are free. Once you have otained the key
+            add the following to your <a href="private-configuration.html">Private Configuration</a></p>
+            <pre><code>secret {
+  ...
+  firms {
+    map-key=&quot;&lt;your-map-key&gt;&quot;
+  }
+  ...
+}</code></pre>
+            
+            <h3 id="download-orekit-ephemeris-data" class="section"><a class="anchor-link left" href="#download-orekit-ephemeris-data"><i class="icofont-laika">&#xef71;</i></a>Download Orekit Ephemeris Data</h3>
+            <p><code>race-odin</code> uses the <a href="https://www.orekit.org/">Orekit</a> library to compute orbits for the JPSS satellites. This library
+            requires ephemeris that needs to be downloaded and updated. Follow these steps to get the data:</p>
+            <ol class="arabic">
+              <li>switch to the <code>race-odin</code> parent directory</li>
+            </ol>
+            <ol class="arabic">
+              <li>clone  the <code>orekit-data</code> repository by executing  <code>git clone https://gitlab.orekit.org/orekit/orekit-data.git</code></li>
+            </ol>
+            <p>Please note this directory needs to be updated periodically. You can either use the <code>update.sh</code> script that is part of the repository
+            or execute <code>git pull</code> from within it.</p>
+            <p>If you keep the name (<code>orekit-data</code>) and location (parent directory of <code>race-odin</code>) no further configuration is required.</p>
+            
+            <h3 id="start-odin-live-data-demo" class="section"><a class="anchor-link left" href="#start-odin-live-data-demo"><i class="icofont-laika">&#xef71;</i></a>Start ODIN Live Data Demo</h3>
+            <p>Please execute the following from within the <code>race-odin</code> directory:</p>
+            <pre><code>./odin --vault ../&lt;my-vault&gt; config/odin-live-demo.conf</code></pre>
+            <p>Once the server is running, switch to a browser (Chromium based browsers have the best support for WebGL as of this writing) and
+            go to <a href="http://localhost:9000/odin">http://localhost:9000/odin</a>.</p>
+            <p>For more details see <a href="running-odin.html">Running RACE-ODIN Applications</a>.</p>
+        </div>
+
+    </body>
+</html>

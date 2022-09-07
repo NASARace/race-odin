@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Building and Running Archive Replay Demo</a></li>
+                  <li class="level2"><a href="#obtain-race-data">Obtain RACE-DATA</a></li>
+                  <li class="level2"><a href="#start-odin-live-data-demo">Start ODIN Live Data Demo</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation for RACE-ODIN</a></li>
+                  <li class="level2"><a href="vision.html">Vision behind RACE-ODIN</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="live-demo.html">Building and Running Live Data Demo</a></li>
+                  <li class="level2 active"><a href="#">Building and Running Archive Replay Demo</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
+                  <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
+                  <li class="level2"><a href="common-root.html">Create Common Root Dir for RACE/ODIN</a></li>
+                  <li class="level2"><a href="cesium-access-token.html">Cesium Access Token</a></li>
+                  <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+                  <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
+                  <li class="level2"><a href="prerequisites.html">Check Prerequisites for RACE-ODIN</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="building-and-running-archive-replay-demo" class="title">Building and Running Archive Replay Demo</h1>
+            <p>The archived data demo from <code>config/odin-czu-demo.conf</code> shows a variety of input sources including</p>
+            <ul>
+              <li>satellite fire detection (from the <a href="https://en.wikipedia.org/wiki/CZU_Lightning_Complex_fires">CZU fire</a>)</li>
+            </ul>
+            <ul>
+              <li>powerline fire sensors (<a href="https://delphiretech.com/">Delphire Sentinel</a>)</li>
+            </ul>
+            <ul>
+              <li>local flight and ground tracking</li>
+            </ul>
+            <ul>
+              <li>static information such as powerline locations, <a href="https://osmbuildings.org/">OSM buildings</a></li>
+            </ul>
+            <ul>
+              <li>NOAA wind forecast</li>
+            </ul>
+            <img class="center scale80" src="images/archive-demo.png">
+            <p>To run the demo please follow these steps:</p>
+            <ol class="arabic">
+              <li><a href="prerequisites.html">Check Prerequisites for Building and Running RACE-ODIN</a></li>
+              <li><a href="common-root.html">Create Common Root Directory for RACE/ODIN components</a></li>
+              <li><a href="building-race.html">Obtain and Build RACE</a></li>
+              <li><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+              <li><a href="#obtain-race-data">Obtain RACE-DATA</a></li>
+              <li><a href="#start-odin-live-data-demo">Start ODIN Live Data Demo</a></li>
+            </ol>
+            
+            <h2 id="obtain-race-data" class="section"><a class="anchor-link left" href="#obtain-race-data"><i class="icofont-laika">&#xef71;</i></a>Obtain RACE-DATA</h2>
+            <p>This project only contains archived data. To retrieve it you need to have <a href="https://git-lfs.github.com/">Git-lfs</a>
+            installed, which is platform dependent and might require admin privileges. Please refer to the <a href="https://git-lfs.github.com/">Git-lfs</a>
+            website and don&#39;t forget to run <code>git-lfs install</code> from a command line before cloning repositories.</p>
+            <p>Once Git-lfs is installed you can download <a href="https://github.com/NASARace/race-data">RACE-DATA</a> by executing from a
+            command line</p>
+            <pre><code>cd race-root   # or what you chose as the common root dir in step 2
+git clone https://github.com/NASARace/race-data.git</code></pre>
+            <p>Note there is no need to build anything as this is a data-only repository.</p>
+            
+            <h2 id="start-odin-live-data-demo" class="section"><a class="anchor-link left" href="#start-odin-live-data-demo"><i class="icofont-laika">&#xef71;</i></a>Start ODIN Live Data Demo</h2>
+            <p>Apart from the <a href="cesium-access-token.html">Cesium access token</a> there is no further vault entry to the <a href="private-configuration.html">Private Configuration</a>
+            required.</p>
+            <p>To start the demo server run the following from within the <code>race-odin</code> directory:</p>
+            <pre><code>./odin --vault ../&lt;my-vault&gt; config/odin-czu-demo.conf</code></pre>
+            <p>Once the server is running, switch to a browser (Chromium based browsers have the best support for WebGL as of this writing) and
+            go to <a href="http://localhost:9000/odin">http://localhost:9000/odin</a>.
+            For more details see <a href="running-odin.html">Running RACE-ODIN Applications</a>.</p>
+        </div>
+
+    </body>
+</html>

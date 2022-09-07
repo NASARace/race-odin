@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Check Prerequisites for RACE-ODIN</a></li>
+                  <li class="level2"><a href="#_1-install-a-recent-java-jdk">1. install a recent Java JDK</a></li>
+                  <li class="level2"><a href="#_2-install-the-sbt-build-tool">2. install the SBT build tool</a></li>
+                  <li class="level2"><a href="#_3-install-git-and-git-lfs">3. install Git and Git-LFS</a></li>
+                  <li class="level2"><a href="#_4-obtain-cesium-ion-access-token">4. Obtain Cesium Ion access token</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation for RACE-ODIN</a></li>
+                  <li class="level2"><a href="vision.html">Vision behind RACE-ODIN</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="live-demo.html">Building and Running Live Data Demo</a></li>
+                  <li class="level2"><a href="archive-demo.html">Building and Running Archive Replay Demo</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
+                  <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
+                  <li class="level2"><a href="common-root.html">Create Common Root Dir for RACE/ODIN</a></li>
+                  <li class="level2"><a href="cesium-access-token.html">Cesium Access Token</a></li>
+                  <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+                  <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
+                  <li class="level2 active"><a href="#">Check Prerequisites for RACE-ODIN</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="check-prerequisites-for-race-odin" class="title">Check Prerequisites for RACE-ODIN</h1>
+            <p>If this is the first time you install RACE or RACE-ODIN you have to check or get a number of prerequisites, namely:</p>
+            <ul>
+              <li>a recent <strong>Java SDK</strong></li>
+            </ul>
+            <ul>
+              <li>the <strong>SBT</strong> build tool</li>
+            </ul>
+            <ul>
+              <li>the <strong>Git</strong> version control system and its <strong>Git-Lfs</strong> extension</li>
+            </ul>
+            <ul>
+              <li>obtain a Cesium Ion access token</li>
+            </ul>
+            
+            <h3 id="_1-install-a-recent-java-jdk" class="section"><a class="anchor-link left" href="#_1-install-a-recent-java-jdk"><i class="icofont-laika">&#xef71;</i></a>1. install a recent Java JDK</h3>
+            <p>This should be a JDK version &gt; 11 (tested with JDK 18.x), e.g. from <a href="https://openjdk.java.net/">OpenJDK</a>.
+            Please note the JDK can be installed within the user file system by extracting the downloaded archive and
+            adding its <code>bin/</code> directory to the <code>PATH</code> environment variable.</p>
+            <p>The JDK runtime libraries (which are part of the JDK) are the only prerequisite for running and already built RACE-ODIN system.</p>
+            
+            <h3 id="_2-install-the-sbt-build-tool" class="section"><a class="anchor-link left" href="#_2-install-the-sbt-build-tool"><i class="icofont-laika">&#xef71;</i></a>2. install the SBT build tool</h3>
+            <p>Please visit the  <a href="https://www.scala-sbt.org/download.html">SBT download page</a> for instructions of how to download
+            and install the SBT build tool. If there is no suitable package for your operating system obtain the generic *.zip archive,
+            unpack and add its <code>bin/</code> directory to the <code>PATH</code> (SBT is Java based).</p>
+            
+            <h3 id="_3-install-git-and-git-lfs" class="section"><a class="anchor-link left" href="#_3-install-git-and-git-lfs"><i class="icofont-laika">&#xef71;</i></a>3. install Git and Git-LFS</h3>
+            <p>If the Git version control system is not installed on your system, please visit the
+            <a href="https://git-scm.com/downloads">Git download page</a> for instructions.</p>
+            <p>If you don&#39;t have Git-LFS installed (the Git extension to handle large binary files), please follow instructions on
+            the <a href="https://git-lfs.github.com">Git LFS</a> page. Please do not forget to run <code>git lfs install</code> after installation.</p>
+            
+            <h3 id="_4-obtain-cesium-ion-access-token" class="section"><a class="anchor-link left" href="#_4-obtain-cesium-ion-access-token"><i class="icofont-laika">&#xef71;</i></a>4. Obtain Cesium Ion access token</h3>
+            <p>Although not strictly required for occasionally running the basic RACE-ODIN demos it is recommended to obtain a free
+            Cesium Ion access token from <a href="https://cesium.com/ion/signup/">https://cesium.com/ion/signup/</a>. Once you have an access token, please enter it into
+            your &#39;Private Configuration&#39;.</p>
+        </div>
+
+    </body>
+</html>

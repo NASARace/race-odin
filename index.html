@@ -32,52 +32,73 @@
                 <ul class="nav-list">
                   <li class="level1 nav-header">RACE-ODIN Manual</li>
                   <li class="level2 active"><a href="#">About ODIN-fire</a></li>
-                  <li class="level2"><a href="motivation.html">Motivation</a></li>
-                  <li class="level2"><a href="vision.html">Vision</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation for RACE-ODIN</a></li>
+                  <li class="level2"><a href="vision.html">Vision behind RACE-ODIN</a></li>
                   <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="live-demo.html">Building and Running Live Data Demo</a></li>
+                  <li class="level2"><a href="archive-demo.html">Building and Running Archive Replay Demo</a></li>
                   <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
-                  <li class="level2"><a href="demo.html">Building and running the demo application</a></li>
-                  <li class="level3"><a href="demo.html#how-to-install-and-build-prerequisites-and-components">How to install and build prerequisites and components</a></li>
-                  <li class="level3"><a href="demo.html#how-to-run-the-race-odin-demo">How to run the RACE-ODIN demo</a></li>
                   <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
+                  <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
+                  <li class="level2"><a href="common-root.html">Create Common Root Dir for RACE/ODIN</a></li>
+                  <li class="level2"><a href="cesium-access-token.html">Cesium Access Token</a></li>
+                  <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+                  <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
+                  <li class="level2"><a href="prerequisites.html">Check Prerequisites for RACE-ODIN</a></li>
                 </ul>
             </div>
         </div>
 
         <div class="main">
             <h1 id="about-odin-fire" class="title">About ODIN-fire</h1>
-            <p>The <em>Open Data Integration Framework for Wildland Fire Management</em> (ODIN-fire) project is aimed at providing an open source 
+            <p>The <em>Open Data Integration Framework for Wildland Fire Management</em> (ODIN-fire) project is aimed at providing an open source
             framework that allows stakeholders to create and run their own fire related applications. It is not another
-            wildland fire website or service. ODIN-fire is a software project to integrate a wide variety of existing 
-            3rd party web services such as weather, fire behavior models and sensor data with near-realtime tracking information 
-            such as ground crews, vehicles and aircraft. </p>
-            <p><img class="center scale70" src="images/odin-node.svg" alt="RACE overview"></p>
+            wildland fire website or service. ODIN-fire is a software project to integrate a wide variety of existing
+            3rd party web services such as weather, fire behavior models and sensor data with near-realtime tracking information
+            such as ground crews, vehicles and aircraft.</p>
+            <img class="center scale70" src="images/odin-node.svg">
             <p>Sytems built with ODIN-fire can run within the stakeholder organizations. They can be deployed in the field and can operate
-            with limited or intermittend connectivity to the outside world. The primary use case is a web-server with local/persistent 
-            data storage that runs within and only serves the stakeholder network (e.g. an incident command post). Although there is no 
-            reason why ODIN-fire could not run in the cloud we do not target publicly available services supporting thousands of simultaneous 
+            with limited or intermittent connectivity to the outside world. The primary use case is a web-server with local/persistent
+            data storage that runs within and only serves the stakeholder network (e.g. an incident command post). Although there is no
+            reason why ODIN-fire could not run in the cloud we do not target publicly available services supporting thousands of simultaneous
             users/requests.</p>
-            <p>ODIN-fire is built on top of the open source <a href="http://nasarace.github.io/race/">RACE</a> actor framework. Technically it uses the more general RACE system
-            to support the specific application domain of wildland fire management. Consequently the main distribution path is through the
-            <a href="https://github.com/NASARace/race">RACE_repository</a> and related binary artifacts. To that we have added a new <a href="https://github.com/NASARace/race-odin">RACE_ODIN_repository</a> to provide</p>
+            <p>ODIN-fire is built on top of the open source RACE_ actor framework. Technically it uses the more general RACE system
+            to support the specific application domain of wildland fire management. Consequently, the main distribution path is through the
+            <a href="https://github.com/NASARace/race">RACE_repository</a> and related binary artifacts. To that we have added a new 
+            <a href="https://github.com/NASARace/race-odin">RACE-ODIN repository</a> to provide</p>
             <ul>
-              <li>an example of how to create new ODIN components (using the <a href="https://delphiretech.com/sentinel">Delphire_Sentinel</a> sensor network)</li>
-              <li>a runnable example of an ODIN-fire application</li>
+              <li>an example of how to create new ODIN components (using the <a href="https://delphiretech.com/sentinel">Delphire Sentinel</a> sensor
+              network as an example)</li>
+              <li>runnable examples of an ODIN-fire application</li>
               <li>ODIN-fire related documentation (such as this web page)</li>
             </ul>
-            <p>The primary reason for extracting this from the <a href="https://github.com/NASARace/race">RACE_repository</a> is readability - RACE is a large project with hundreds of
-            files that would make it hard to locate respective example sources.</p>
-            <p>This website is not intended to replicate RACE documentation, for which we refer to the <a href="http://nasarace.github.io/race/">RACE</a> website. Here we focus on the 
-            ODIN-fire specific aspects. Please note that - as opposed to RACE - ODIN-fire is a new project. Expect to see frequent changes
-            to both respository and website.</p>
+            <p>The primary reason for extracting this from the <a href="https://github.com/NASARace/race">RACE_repository</a> is readability - RACE 
+            is a large project with hundreds of files that would make it hard to locate respective example sources.</p>
+            <p>This website is not intended to replicate RACE documentation, for which we refer to the <a href="http://nasarace.github.io/race/">RACE</a>
+            website. Here we focus on the ODIN-fire specific aspects. Please note that - as opposed to RACE - ODIN-fire is a 
+            new project. Expect to see frequent changes to both the repository and the website.</p>
             <p>To learn more, read about</p>
             <ul>
-              <li>the <a href="motivation.html#motivation">Motivation</a> for ODIN-fire</li>
-              <li>the <a href="vision.html#vision">Vision</a> behind it</li>
-              <li><a href="opensource.html#why-is-odin-fire-open-sourced">Why is ODIN-fire Open Sourced</a></li>
-              <li>the <a href="application.html#anatomy-of-an-odin-fire-application">Anatomy of an ODIN-fire application</a></li>
-              <li><a href="demo.html#building-and-running-the-demo-application">Building and running the demo application</a></li>
-              <li>available <a href="presentations.html#presentations">Presentations</a></li>
+              <li>the <a href="motivation.html">Motivation</a> for ODIN-fire</li>
+            </ul>
+            <ul>
+              <li>the <a href="vision.html">Vision</a> behind it</li>
+            </ul>
+            <ul>
+              <li><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+            </ul>
+            <ul>
+              <li><a href="archive-demo.html">Building and Running the RACE-ODIN Archive Replay Demo</a></li>
+            </ul>
+            <ul>
+              <li><a href="live-demo.html">Building and Running the RACE-ODIN live-data Demo</a></li>
+            </ul>
+            <ul>
+              <li>the <a href="application.html">Anatomy of an ODIN-fire application</a></li>
+            </ul>
+            <ul>
+              <li>available Presentations_</li>
             </ul>
         </div>
 

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Create Common Root Dir for RACE/ODIN</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation for RACE-ODIN</a></li>
+                  <li class="level2"><a href="vision.html">Vision behind RACE-ODIN</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="live-demo.html">Building and Running Live Data Demo</a></li>
+                  <li class="level2"><a href="archive-demo.html">Building and Running Archive Replay Demo</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
+                  <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
+                  <li class="level2 active"><a href="#">Create Common Root Dir for RACE/ODIN</a></li>
+                  <li class="level2"><a href="cesium-access-token.html">Cesium Access Token</a></li>
+                  <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+                  <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
+                  <li class="level2"><a href="prerequisites.html">Check Prerequisites for RACE-ODIN</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="create-common-root-dir-for-race-odin" class="title">Create Common Root Dir for RACE/ODIN</h1>
+            <p>While it is not required it is recommended to put all RACE and RACE-ODIN related projects under a common root directory.
+            This not ony pertains to the two projects itself but also to the data and configuration files that are used by them.</p>
+            <p>Location and name for this directory can be chosen freely. The only manual action for this step is to create a root
+            directory, e.g. by running from a command prompt</p>
+            <pre><code>&gt; mkdir race-root</code></pre>
+            <p>Ultimately you should have a structure such as</p>
+            <pre><code>&lt;race-root&gt;/
+│                    #--- basic projects:
+├─╴    race/             # &#39;&gt; git clone https://github.com/NASARace/race.git&#39;
+├─╴    race-odin/        # &#39;&gt; git clone https://github.com/NASARace/race-odin.git&#39;
+│
+│                    #--- for archive replay demo:
+├─╴    race-data/        # &#39;&gt; git clone https://github.com/NASARace/race-data.git&#39; (using git-lfs)
+│
+│                    #--- for live data demo:
+├─╴    orekit-data/      # &#39;&gt; git clone https://gitlab.orekit.org/orekit/orekit-data.git&#39;
+│
+│                    #--- local configuration
+├─╴    &lt;my-vault&gt;        # manually created text file - see respective build pages for entries
+├─╴    local-config/     # optional - to keep locally modified *.conf files 
+│
+│                    #--- auto created when running RACE or RACE-ODIN
+└─╴    cache/            # automatically created/populated by RACE webserver </code></pre>
+            <p>The name for the <em>my-vault</em> file is your choice but has to be remembered since it has to be specified when running
+            RACE or RACE-ODIN, which typically involves a command sequence such as</p>
+            <pre><code>cd race-odin  
+                         # for un-modified config files (e.g. race-odin/config/odin-live.conf):
+/odin --vault ../&lt;my-vault&gt; config/&lt;some-config-file&gt;
+                         # for locally modified/created config files:
+/odin --vault ../&lt;my-vault&gt; ../local-config/&lt;some-config-file&gt;</code></pre>
+            <p>Should this directory structure not be suitable (e.g. because of several installed RACE versions) all of the
+            above names can be modified and set in respective config files.</p>
+        </div>
+
+    </body>
+</html>
