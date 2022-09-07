@@ -1,4 +1,4 @@
-# Building and Running the RACE-ODIN Archive Replay Demo
+# Building and Running Archive Replay Demo
 
 The archived data demo from `config/odin-czu-demo.conf` shows a variety of input sources including
 

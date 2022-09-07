@@ -1,4 +1,4 @@
-# Building and Running the RACE-ODIN live-data Demo
+# Building and Running Live Data Demo
 
 The live-data demo from `config/odin-live.conf` shows the following input sources
 
