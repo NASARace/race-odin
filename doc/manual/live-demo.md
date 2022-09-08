@@ -2,9 +2,9 @@
 
 The live-data demo from `config/odin-live.conf` shows the following input sources
 
- * (optional) aircraft (ADS-B) tracking
- * fire detection from GOES-R (geostationary) satellites
- * fire tracking with JPSS (polar orbiting) satellites
+ * (optional) aircraft ([ADS-B](https://www.faa.gov/air_traffic/technology/adsb/)) tracking
+ * fire detection from [GOES-R](https://www.goes-r.gov/) (geostationary) satellites
+ * fire tracking with [JPSS](https://www.nesdis.noaa.gov/about/our-offices/joint-polar-satellite-system-jpss-program-office) (polar orbiting) satellites
 
 <img class="center scale80" src="images/live-demo.png">
 
@@ -33,6 +33,9 @@ demodulator/decoder, which currently builds on Linux and macOS. This decoder req
 
 While there are several options of how to build such a system details are outside the scope of this documentation. Please
 refer to these [instructions](https://flightaware.com/adsb/piaware/build) for details.
+
+If you don't have access or don't want to track aircraft you can skip this configuration step. Please note that in this case
+you have to use the `config/odin-livesat-demo.conf` configuration to run the live ODIN demo.
 
 Once you have access to such a system, configuring RACE-ODIN is just a matter of adding hostname and port to the 
 'Private Configuration' vault file : 
@@ -95,9 +98,18 @@ If you keep the name (`orekit-data`) and location (parent directory of `race-odi
 
 
 ### Start ODIN Live Data Demo
-Please execute the following from within the `race-odin` directory:
+There are two versions of the live data demo: with and without live local air traffic monitoring. Which one to run should
+depend on whether you have access to an ads-b host or not.
+
+If you have aceess to (and have configured) an ads-b host, please execute the following from within the `race-odin` directory:
 
     ./odin --vault ../<my-vault> config/odin-live-demo.conf
+
+You can still run this if you don't have access to live ads-b data but the system startup will be slower and you will get
+warnings about import actor timeout. In this case it is therefore recommended to run with just the publicly available
+satellite data by executing
+
+    ./odin --vault ../<my-vault> config/odin-livesat-demo.conf
 
 Once the server is running, switch to a browser (Chromium based browsers have the best support for WebGL as of this writing) and
 go to <http://localhost:9000/odin>.
