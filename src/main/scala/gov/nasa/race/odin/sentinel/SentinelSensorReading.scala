@@ -56,7 +56,7 @@ import SentinelSensorReading._
  * and heap pressure in the context of how volume input streams
  */
 trait SentinelSensorReading extends Dated with JsonSerializable {
-  val deviceId: Int
+  val deviceId: String
   val sensorNo: Int
 
   def readingType: CharSequence
@@ -70,14 +70,14 @@ trait SentinelSensorReading extends Dated with JsonSerializable {
 
   // stand-alone serializer (e.g. for update events)
   def serializeMembersTo (w: JsonWriter): Unit = {
-    w.writeIntMember(DEVICE_ID,deviceId)
+    w.writeStringMember(DEVICE_ID,deviceId)
     serializeDataTo(w)
   }
 
   def serializeReadingTo (w: JsonWriter): Unit = {
     w.writeObject { _
       .writeObjectMember(READING) { _
-        .writeIntMember(DEVICE_ID, deviceId)
+        .writeStringMember(DEVICE_ID, deviceId)
         .writeObjectMember(readingType){ serializeDataTo }
       }
     }
@@ -99,7 +99,7 @@ case class SentinelUpdates (readings: Seq[SentinelSensorReading]) extends JsonSe
 
 //--- the sentinel sensor reading types
 
-case class SentinelGpsReading (deviceId: Int, sensorNo: Int, date: DateTime, lat: Angle, lon: Angle) extends SentinelSensorReading {
+case class SentinelGpsReading (deviceId: String, sensorNo: Int, date: DateTime, lat: Angle, lon: Angle) extends SentinelSensorReading {
   def readingType = GPS
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -121,7 +121,7 @@ case class SentinelGpsReading (deviceId: Int, sensorNo: Int, date: DateTime, lat
             },
  */
 trait SentinelGpsParser extends UTF8JsonPullParser {
-  def parseGpsValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGpsReading] = {
+  def parseGpsValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGpsReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var lat = Angle.UndefinedAngle
@@ -140,7 +140,7 @@ trait SentinelGpsParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelGyroReading (deviceId: Int, sensorNo: Int, date: DateTime, gx: Double, gy: Double, gz: Double) extends SentinelSensorReading {
+case class SentinelGyroReading (deviceId: String, sensorNo: Int, date: DateTime, gx: Double, gy: Double, gz: Double) extends SentinelSensorReading {
   def readingType = GYRO
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -164,7 +164,7 @@ case class SentinelGyroReading (deviceId: Int, sensorNo: Int, date: DateTime, gx
      }
  */
 trait SentinelGyroParser extends UTF8JsonPullParser {
-  def parseGyroValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGyroReading] = {
+  def parseGyroValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGyroReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var gx: Double = 0
@@ -185,7 +185,7 @@ trait SentinelGyroParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelMagReading (deviceId: Int, sensorNo: Int, date: DateTime, mx: Double, my: Double, mz: Double) extends SentinelSensorReading {
+case class SentinelMagReading (deviceId: String, sensorNo: Int, date: DateTime, mx: Double, my: Double, mz: Double) extends SentinelSensorReading {
   def readingType = MAG
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -209,7 +209,7 @@ case class SentinelMagReading (deviceId: Int, sensorNo: Int, date: DateTime, mx:
      }
  */
 trait SentinelMagParser extends UTF8JsonPullParser {
-  def parseMagValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelMagReading] = {
+  def parseMagValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelMagReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var mx: Double = 0
@@ -230,7 +230,7 @@ trait SentinelMagParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelAccelReading (deviceId: Int, sensorNo: Int, date: DateTime, ax: Double, ay: Double, az: Double) extends SentinelSensorReading {
+case class SentinelAccelReading (deviceId: String, sensorNo: Int, date: DateTime, ax: Double, ay: Double, az: Double) extends SentinelSensorReading {
   def readingType = ACCEL
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -253,7 +253,7 @@ case class SentinelAccelReading (deviceId: Int, sensorNo: Int, date: DateTime, a
      }
  */
 trait SentinelAccelParser extends UTF8JsonPullParser {
-  def parseAccelValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelAccelReading] = {
+  def parseAccelValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelAccelReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var ax: Double = 0
@@ -274,7 +274,7 @@ trait SentinelAccelParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelGasReading (deviceId: Int, sensorNo: Int, date: DateTime, gas: Long, humidity: Double, pressure: Double, alt: Double) extends SentinelSensorReading {
+case class SentinelGasReading (deviceId: String, sensorNo: Int, date: DateTime, gas: Long, humidity: Double, pressure: Double, alt: Double) extends SentinelSensorReading {
   def readingType = GAS
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -300,7 +300,7 @@ case class SentinelGasReading (deviceId: Int, sensorNo: Int, date: DateTime, gas
             },
  */
 trait SentinelGasParser extends UTF8JsonPullParser {
-  def parseGasValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGasReading] = {
+  def parseGasValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGasReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var gas: Long = 0
@@ -323,7 +323,7 @@ trait SentinelGasParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelThermoReading (deviceId: Int, sensorNo: Int, date: DateTime, temp: Temperature) extends SentinelSensorReading {
+case class SentinelThermoReading (deviceId: String, sensorNo: Int, date: DateTime, temp: Temperature) extends SentinelSensorReading {
   def readingType = THERMO
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -343,7 +343,7 @@ case class SentinelThermoReading (deviceId: Int, sensorNo: Int, date: DateTime, 
             },
  */
 trait SentinelThermoParser extends UTF8JsonPullParser {
-  def parseThermoValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelThermoReading] = {
+  def parseThermoValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelThermoReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var temp = UndefinedTemperature
@@ -360,7 +360,7 @@ trait SentinelThermoParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelVocReading (deviceId: Int, sensorNo: Int, date: DateTime, tvoc: Int, eco2: Int) extends SentinelSensorReading {
+case class SentinelVocReading (deviceId: String, sensorNo: Int, date: DateTime, tvoc: Int, eco2: Int) extends SentinelSensorReading {
   def readingType = VOC
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -382,7 +382,7 @@ case class SentinelVocReading (deviceId: Int, sensorNo: Int, date: DateTime, tvo
             },
  */
 trait SentinelVocParser extends UTF8JsonPullParser {
-  def parseVocValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelVocReading] = {
+  def parseVocValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelVocReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var tvoc: Int = 0
@@ -401,7 +401,7 @@ trait SentinelVocParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelAnemoReading(deviceId: Int, sensorNo: Int, date: DateTime, dir: Angle, spd: Speed) extends SentinelSensorReading {
+case class SentinelAnemoReading(deviceId: String, sensorNo: Int, date: DateTime, dir: Angle, spd: Speed) extends SentinelSensorReading {
   def readingType = ANEMO
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -423,7 +423,7 @@ case class SentinelAnemoReading(deviceId: Int, sensorNo: Int, date: DateTime, di
             },
  */
 trait SentinelAnemoParser extends UTF8JsonPullParser {
-  def parseWindValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelAnemoReading] = {
+  def parseWindValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelAnemoReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var angle = Angle.UndefinedAngle
@@ -442,7 +442,7 @@ trait SentinelAnemoParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelFireReading (deviceId: Int, sensorNo: Int, date: DateTime, prob: Double) extends SentinelSensorReading {
+case class SentinelFireReading (deviceId: String, sensorNo: Int, date: DateTime, prob: Double) extends SentinelSensorReading {
   def readingType = FIRE
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -462,7 +462,7 @@ case class SentinelFireReading (deviceId: Int, sensorNo: Int, date: DateTime, pr
             },
  */
 trait SentinelFireParser extends UTF8JsonPullParser {
-  def parseFireValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelFireReading] = {
+  def parseFireValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelFireReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var prob: Double = 0
@@ -479,7 +479,7 @@ trait SentinelFireParser extends UTF8JsonPullParser {
   }
 }
 
-case class SentinelCameraReading (deviceId: Int, sensorNo: Int, date: DateTime, isIR: Boolean, path: String, recordId: Long) extends SentinelSensorReading {
+case class SentinelCameraReading (deviceId: String, sensorNo: Int, date: DateTime, isIR: Boolean, path: String, recordId: Long) extends SentinelSensorReading {
   def readingType = CAMERA
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -502,7 +502,7 @@ case class SentinelCameraReading (deviceId: Int, sensorNo: Int, date: DateTime, 
             }
  */
 trait SentinelCameraParser extends UTF8JsonPullParser {
-  def parseCameraValue(deviceId: Int, defaultSensor: Int, defaultDate: DateTime): Option[SentinelCameraReading] = {
+  def parseCameraValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelCameraReading] = {
     var date = defaultDate
     var sensorNo = defaultSensor
     var isIR: Boolean = false

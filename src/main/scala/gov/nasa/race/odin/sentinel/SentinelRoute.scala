@@ -56,7 +56,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
 
   private val writer = new JsonWriter()
 
-  var sentinels: SentinelSet = SentinelSet(Map.empty[Int,Sentinel])
+  var sentinels: SentinelSet = SentinelSet(Map.empty[String,Sentinel])
   var sentinelsMsg: Option[TextMessage.Strict] = None
 
   val sentinelDir = config.getString("sentinel.dir")

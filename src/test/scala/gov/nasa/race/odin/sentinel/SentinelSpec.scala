@@ -21,4 +21,28 @@ class SentinelSpec extends AnyFlatSpec with RaceSpec {
     println(s"got ${updates.length} updates")
     updates.foreach(println)
   }
+
+  "a SentinelParser" should "parse known device messages" in {
+    val input = FileUtils.fileContentsAsString(baseResourceFile("sentinel-devices.json")).get
+    println(s"--- parsing:\n$input")
+
+    val parser = new SentinelParser()
+    parser.initialize(input.getBytes)
+    val devices = parser.parseDevices()
+
+    println(s"got ${devices.size} devices")
+    devices.foreach(println)
+  }
+
+  "a SentinelParser" should "parse known sensor messages" in {
+    val input = FileUtils.fileContentsAsString(baseResourceFile("sentinel-sensors.json")).get
+    println(s"--- parsing:\n$input")
+
+    val parser = new SentinelParser()
+    parser.initialize(input.getBytes)
+    val sensors = parser.parseSensors()
+
+    println(s"got ${sensors.size} sensors")
+    sensors.foreach(println)
+  }
 }

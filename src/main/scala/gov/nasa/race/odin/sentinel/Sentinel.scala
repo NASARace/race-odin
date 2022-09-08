@@ -33,6 +33,11 @@ object Sentinel {
   val ID = asc("id")
   val DATA = asc("data")
   val IMAGES = asc("images")
+  val INFO = asc("info")
+  val NO = asc("no")
+  val PART = asc("partNo")
+  val CAPS = asc("capabilities")
+  val CONFS = asc("camConfs")
 
   def writeReadingMemberTo (w: JsonWriter, name: CharSequence, date: DateTime)(f: JsonWriter=>Unit): Unit = {
     w.writeObjectMember(name) { w =>
@@ -48,7 +53,7 @@ import Sentinel._
  * This is basically a time-stamped snapshot of accumulated SentinelReading records
   */
 case class Sentinel (
-                      id: Int, // deviceId
+                      id: String, // deviceId
                       date: DateTime = DateTime.UndefinedDateTime, // last sensor update
                       gps: Option[SentinelGpsReading] = None,
                       gyro: Option[SentinelGyroReading] = None,
@@ -63,7 +68,7 @@ case class Sentinel (
                ) extends Dated with JsonSerializable {
 
   def serializeMembersTo (w: JsonWriter): Unit = {
-    w.writeIntMember(DEVICE_ID, id)
+    w.writeStringMember(DEVICE_ID, id)
     w.writeDateTimeMember(TIME_RECORDED,date)
 
     ifSome(gps){ _.serializeAsMemberTo(w) }
@@ -111,8 +116,8 @@ case class Sentinel (
  * {
  *   "data": [
  *       {
- *           "id": 1054916,
- *           "timeRecorded": 1648425602,
+ *           "id": "dizwqq96w36j",  // was numeric
+ *           "timeRecorded": ""2022-09-07T02:41:57.000Z"" // was epoch seconds,
  *           "sensorNo": 0,
  *           "deviceId": 18,
  *           "<sensor-type>": { sensor-data }
@@ -126,14 +131,14 @@ class SentinelParser extends UTF8JsonPullParser
 
   def parse(): Seq[SentinelSensorReading] = {
     val updates = ArrayBuffer.empty[SentinelSensorReading]
-    var recordId: Int = -1
-    var deviceId: Int = -1
+    var recordId: String = null
+    var deviceId: String = null
     var sensorId = -1
     var timeRecorded = DateTime.UndefinedDateTime
 
     def appendSomeRecording (maybeReading: Option[SentinelSensorReading]): Unit = {
       ifSome(maybeReading){ r=>
-        if (deviceId != -1 && timeRecorded.isDefined) {
+        if (deviceId != null && timeRecorded.isDefined) {
           updates += r
         }
       }
@@ -143,15 +148,15 @@ class SentinelParser extends UTF8JsonPullParser
     foreachMemberInCurrentObject {
       case DATA =>
         foreachElementInCurrentArray {
-          recordId = -1
-          deviceId = -1
+          recordId = null
+          deviceId = null
           sensorId = -1
           timeRecorded = DateTime.UndefinedDateTime
 
           foreachMemberInCurrentObject {
                   // NOTE - this relies on member order in the serialization
-            case ID => recordId = unQuotedValue.toInt
-            case DEVICE_ID => deviceId = unQuotedValue.toInt
+            case ID => recordId = value.toString() // we accept both quoted and unquoted (int -> string)
+            case DEVICE_ID => deviceId = value.intern // ditto
             case SENSOR_NO => sensorId = unQuotedValue.toInt
             case TIME_RECORDED => timeRecorded = dateTimeValue
 
@@ -173,6 +178,80 @@ class SentinelParser extends UTF8JsonPullParser
     }
 
     updates.toSeq
+  }
+
+  case class SentinelDeviceInfo (deviceId: String, info: String)
+
+  /**
+   * until device/recordIds are properly separated we have to parse this separately. The silver lining is
+   * that we only expect a subset of above message format in this case
+   *
+   *   "data": [
+   *       {
+   *          "id": "dizwqq96w36j",
+   *          "info": "test"
+   *       }
+   *    ], ...
+   */
+  def parseDevices(): Seq[SentinelDeviceInfo] = {
+    val deviceList = ArrayBuffer.empty[SentinelDeviceInfo]
+
+    ensureNextIsObjectStart()
+    foreachMemberInCurrentObject {
+      case DATA =>
+        foreachElementInCurrentArray {
+          var deviceId: String = null
+          var info: String = ""
+
+          foreachMemberInCurrentObject {
+            case ID => deviceId = quotedValue.intern
+            case INFO => info = quotedValue.toString()
+          }
+          if (deviceId != null) deviceList += SentinelDeviceInfo(deviceId,info)
+        }
+      case _ => // ignore other members
+    }
+    deviceList.toSeq
+  }
+
+  case class SentinelSensorInfo (sensorNo: Int, partNo: String, capabilities: Seq[String])
+
+  /**
+   * another initialization message to get sensors for a given device - see parseDevices()
+   *   {
+   *      "no": 0,
+   *      "partNo": "ICM20x",
+   *      "camConfs": [],
+   *      "capabilities": [
+   *         "accelerometer",
+   *         "gyroscope",
+   *         "magnetometer"
+   *       ]
+   *   }, ...
+   */
+  def parseSensors(): Seq[SentinelSensorInfo] = {
+    val sensorList = ArrayBuffer.empty[SentinelSensorInfo]
+
+    ensureNextIsObjectStart()
+    foreachMemberInCurrentObject {
+      case DATA =>
+        foreachElementInCurrentArray {
+          var sensorNo: Int = -1
+          var part: String = ""
+          var caps = Seq.empty[String]
+
+          foreachMemberInCurrentObject {
+            case NO => sensorNo = unQuotedValue.toInt
+            case PART => part = quotedValue.toString()
+            case CONFS => skipPastAggregate() // ignore for now
+            case CAPS => caps = readCurrentStringArray()
+          }
+          if (sensorNo >= 0) sensorList += SentinelSensorInfo(sensorNo,part,caps)
+        }
+      case _ => // ignore other members
+    }
+
+    sensorList.toSeq
   }
 }
 

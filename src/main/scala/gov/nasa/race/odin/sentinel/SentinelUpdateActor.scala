@@ -29,7 +29,7 @@ import scala.collection.mutable
 import scala.util.Sorting
 
 // an immutable match type we can use in messages
-case class SentinelSet (sentinels: Map[Int,Sentinel]) extends JsonSerializable {
+case class SentinelSet (sentinels: Map[String,Sentinel]) extends JsonSerializable {
   def serializeMembersTo (w: JsonWriter): Unit = {
     w.writeArrayMember("sentinels"){ w=>
       sentinels.keys.toSeq.sortWith( (a,b)=> a > b).foreach { sentinelId=>
@@ -49,8 +49,8 @@ class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with
   val sentinelDir = config.getString("sentinel-dir")
   val storeSentinels = config.getBooleanOrElse("store-sentinels", false)
 
-  var sentinels: Map[Int,Sentinel] = Map.empty
-  val updatedSentinelIds: mutable.Set[Int] = mutable.Set.empty
+  var sentinels: Map[String,Sentinel] = Map.empty
+  val updatedSentinelIds: mutable.Set[String] = mutable.Set.empty
 
   def sentinelStore: File = new File(sentinelDir, "sentinels.json")
 
@@ -121,7 +121,7 @@ class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with
     FileUtils.fileContentsAsBytes(file) match {
       case Some(data) =>
         if (parser.initialize(data)){
-          sentinels = parser.parse().foldLeft( Map.empty[Int,Sentinel]) { (acc, r) =>
+          sentinels = parser.parse().foldLeft( Map.empty[String,Sentinel]) { (acc, r) =>
             val deviceId = r.deviceId
             val s = acc.getOrElse(deviceId, new Sentinel(deviceId)).updateWith(r)
             acc + (deviceId -> s)
