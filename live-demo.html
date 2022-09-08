@@ -55,13 +55,13 @@
             <h1 id="building-and-running-live-data-demo" class="title">Building and Running Live Data Demo</h1>
             <p>The live-data demo from <code>config/odin-live.conf</code> shows the following input sources</p>
             <ul>
-              <li>(optional) aircraft (ADS-B) tracking</li>
+              <li>(optional) aircraft (<a href="https://www.faa.gov/air_traffic/technology/adsb/">ADS-B</a>) tracking</li>
             </ul>
             <ul>
-              <li>fire detection from GOES-R (geostationary) satellites</li>
+              <li>fire detection from <a href="https://www.goes-r.gov/">GOES-R</a> (geostationary) satellites</li>
             </ul>
             <ul>
-              <li>fire tracking with JPSS (polar orbiting) satellites</li>
+              <li>fire tracking with <a href="https://www.nesdis.noaa.gov/about/our-offices/joint-polar-satellite-system-jpss-program-office">JPSS</a> (polar orbiting) satellites</li>
             </ul>
             <img class="center scale80" src="images/live-demo.png">
             <p>To run the demo please follow these steps:</p>
@@ -103,6 +103,8 @@
             <a href="https://flightaware.store/products/pro-stick-plus">SDR (software defined radio) dongle</a>.</p>
             <p>While there are several options of how to build such a system details are outside the scope of this documentation. Please
             refer to these <a href="https://flightaware.com/adsb/piaware/build">instructions</a> for details.</p>
+            <p>If you don&#39;t have access or don&#39;t want to track aircraft you can skip this configuration step. Please note that in this case
+            you have to use the <code>config/odin-livesat-demo.conf</code> configuration to run the live ODIN demo.</p>
             <p>Once you have access to such a system, configuring RACE-ODIN is just a matter of adding hostname and port to the 
             &#39;Private Configuration&#39; vault file : </p>
             <pre><code>secret {
@@ -157,8 +159,14 @@
             <p>If you keep the name (<code>orekit-data</code>) and location (parent directory of <code>race-odin</code>) no further configuration is required.</p>
             
             <h3 id="start-odin-live-data-demo" class="section"><a class="anchor-link left" href="#start-odin-live-data-demo"><i class="icofont-laika">&#xef71;</i></a>Start ODIN Live Data Demo</h3>
-            <p>Please execute the following from within the <code>race-odin</code> directory:</p>
+            <p>There are two versions of the live data demo: with and without live local air traffic monitoring. Which one to run should
+            depend on whether you have access to an ads-b host or not.</p>
+            <p>If you have aceess to (and have configured) an ads-b host, please execute the following from within the <code>race-odin</code> directory:</p>
             <pre><code>./odin --vault ../&lt;my-vault&gt; config/odin-live-demo.conf</code></pre>
+            <p>You can still run this if you don&#39;t have access to live ads-b data but the system startup will be slower and you will get
+            warnings about import actor timeout. In this case it is therefore recommended to run with just the publicly available
+            satellite data by executing</p>
+            <pre><code>./odin --vault ../&lt;my-vault&gt; config/odin-livesat-demo.conf</code></pre>
             <p>Once the server is running, switch to a browser (Chromium based browsers have the best support for WebGL as of this writing) and
             go to <a href="http://localhost:9000/odin">http://localhost:9000/odin</a>.</p>
             <p>For more details see <a href="running-odin.html">Running RACE-ODIN Applications</a>.</p>
