@@ -1,0 +1,308 @@
+{
+    "data": [
+        {
+            "id": "iBfsS0ZsWhzQtjcmaFZc",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:57.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1880078125
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "Cb88tjIHn4FdzEImjGI6",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:56.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1727734375
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "c8lH796q5Tj4Q1rRkGjB",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:55.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.15890625
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "1TOPctCtZp5ahwFspIIX",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:54.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.15734375
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "Vy0TH3BXKgGKuUXWHUJp",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:51.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.21046875
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "I3babfy16x432YV9wFRE",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:50.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.199921875
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "qHI8WJ1Lns3mteXHWl7M",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:49.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1876171875
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "Ya4drwLkwtUZEkqVXa38",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:48.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1755078125
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "KQqYiT3RpOqS07aoraGz",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:47.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1614453125
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "6tpHUNk2tfcgrCbgnTMG",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:46.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1458203125
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "dO1h1ZVdAPXfqh7xtBSV",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:45.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1282421875
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "hOg7uw6GDZ28ofHjm3uc",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:44.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1110546875
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "eBIBngXQgk6aIRg1cUYr",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:43.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.0934765625
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "bBioZmMsVUF35DvPQWMe",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:42.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.0794140625
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "C0TuoejM5Wx4lZZcDk0N",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:41.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.071015625
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "IQuehxGZAOK8XldBOapx",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:40.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.083515625
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "9MnfJlj7bU9BL0hxyVwm",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:27.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.17453125
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "gMoeK2AkCCJ51RhpX41B",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:26.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1610546875
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "2Eb09hXYhknajPjndexV",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:25.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.14953125
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "MB8uvkFvJGWhJwq9yKEk",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:24.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1489453125
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "xVgreMhPSJseeFbL1JFY",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:21.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.2024609375
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "Gb5gbypVB7YDhg67Tqk8",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:20.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.1938671875
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "NNAM7g8seZneYigFDBlH",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:19.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.18390625
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "8vnxYTLOCT0hBX13Rp7b",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:18.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.173359375
+            },
+            "evidences": [],
+            "claims": []
+        },
+        {
+            "id": "ktd53RjFGJI2Q3kPqux3",
+            "type": "thermometer",
+            "timeRecorded": "2022-09-07T02:41:17.000Z",
+            "sensorNo": 1,
+            "deviceId": "dizwqq96w36j",
+            "thermometer": {
+                "temperature": 25.160859375
+            },
+            "evidences": [],
+            "claims": []
+        }
+    ],
+    "count": 25,
+    "total": 863626,
+    "page": 1,
+    "pageCount": 34546
+}

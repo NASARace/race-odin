@@ -38,6 +38,8 @@ object Sentinel {
   val PART = asc("partNo")
   val CAPS = asc("capabilities")
   val CONFS = asc("camConfs")
+  val CLAIMS = asc("claims")
+  val EVIDENCE = asc("evidences")
 
   def writeReadingMemberTo (w: JsonWriter, name: CharSequence, date: DateTime)(f: JsonWriter=>Unit): Unit = {
     w.writeObjectMember(name) { w =>
@@ -170,6 +172,9 @@ class SentinelParser extends UTF8JsonPullParser
             case FIRE => appendSomeRecording( parseFireValue( deviceId, sensorId, timeRecorded))
             case VOC => appendSomeRecording( parseVocValue( deviceId, sensorId, timeRecorded))
             case CAMERA => appendSomeRecording( parseCameraValue( deviceId, sensorId, timeRecorded))
+
+            case CLAIMS => skipPastAggregate()
+            case EVIDENCE => skipPastAggregate()
             case _ => // ignore other members
           }
         }
