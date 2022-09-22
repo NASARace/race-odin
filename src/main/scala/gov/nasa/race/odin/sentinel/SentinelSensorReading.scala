@@ -24,6 +24,7 @@ import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Speed.MetersPerSecond
 import gov.nasa.race.uom.Temperature.{Celsius, UndefinedTemperature}
 import gov.nasa.race.uom.{Angle, DateTime, Speed, Temperature}
+import gov.nasa.race.util.FileUtils
 
 object SentinelSensorReading {
 
@@ -32,7 +33,9 @@ object SentinelSensorReading {
   val UPDATES = asc("sentinelUpdates")
   val DEVICE_ID = asc("deviceId")
   val RECORD_ID = asc("recordId")
+  val ID = asc("id") // TODO - this should be recordId
   val SENSOR_NO = asc("sensorNo")
+  val SENSOR_TYPE = asc("type")  // ?? should that be sensorCapability ?
   val TIME_RECORDED = asc("timeRecorded")
   val GPS = asc("gps"); val LAT = asc("latitude"); val LON = asc("longitude")
   val MAG = asc("magnetometer"); val MX = asc("mx"); val MY = asc("my"); val MZ = asc("mz")
@@ -43,7 +46,12 @@ object SentinelSensorReading {
   val VOC = asc("voc"); val TVOC = asc("TVOC"); val ECO2 = asc("eCO2")
   val ANEMO = asc("anemometer"); val ANGLE = asc("angle"); val SPD = asc("speed")
   val FIRE = asc("fire"); val PROB = asc("fireProb")
-  val CAMERA = asc("camera"); val IR = asc("ir"); val PATH = asc("filename")
+  val IMAGE = asc("image"); val FILENAME = asc("filename"); val IS_INFRARED = asc("isInfrared"); val CONF_NO = asc("confNo")
+
+  val IMAGE_PREFIX = "image"
+
+  //--- new records
+  val SMOKE = asc("smoke"); val SMOKE_PROB = asc("smokeProb")
 }
 import SentinelSensorReading._
 
@@ -58,15 +66,22 @@ import SentinelSensorReading._
 trait SentinelSensorReading extends Dated with JsonSerializable {
   val deviceId: String
   val sensorNo: Int
+  val recordId: String
 
   def readingType: CharSequence
 
   // aggregate serializer (not including deviceId)
   def serializeDataTo (w: JsonWriter): Unit
 
-  def serializeAsMemberTo (w: JsonWriter): Unit = {
-    w.writeObjectMember(readingType){ serializeDataTo }
+  def serializeReading (w: JsonWriter): Unit = {
+    w.writeDateTimeMember(TIME_RECORDED, date)
+    w.writeIntMember(SENSOR_NO,sensorNo)
+    serializeDataTo(w)
   }
+
+  def serializeAsMemberTo (w: JsonWriter): Unit = w.writeObjectMember(readingType){ serializeReading }
+
+  def serializeAsElementTo (w: JsonWriter): Unit = w.writeObject { serializeReading }
 
   // stand-alone serializer (e.g. for update events)
   def serializeMembersTo (w: JsonWriter): Unit = {
@@ -77,7 +92,10 @@ trait SentinelSensorReading extends Dated with JsonSerializable {
   def serializeReadingTo (w: JsonWriter): Unit = {
     w.writeObject { _
       .writeObjectMember(READING) { _
+        .writeStringMember(ID,recordId)
         .writeStringMember(DEVICE_ID, deviceId)
+        .writeIntMember(SENSOR_NO,sensorNo)
+        .writeDateTimeMember(TIME_RECORDED, date)
         .writeObjectMember(readingType){ serializeDataTo }
       }
     }
@@ -99,12 +117,10 @@ case class SentinelUpdates (readings: Seq[SentinelSensorReading]) extends JsonSe
 
 //--- the sentinel sensor reading types
 
-case class SentinelGpsReading (deviceId: String, sensorNo: Int, date: DateTime, lat: Angle, lon: Angle) extends SentinelSensorReading {
+case class SentinelGpsReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, lat: Angle, lon: Angle) extends SentinelSensorReading {
   def readingType = GPS
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(LAT, lat.toDegrees)
     w.writeDoubleMember(LON, lon.toDegrees)
   }
@@ -121,31 +137,25 @@ case class SentinelGpsReading (deviceId: String, sensorNo: Int, date: DateTime, 
             },
  */
 trait SentinelGpsParser extends UTF8JsonPullParser {
-  def parseGpsValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGpsReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseGpsValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelGpsReading] = {
     var lat = Angle.UndefinedAngle
     var lon = Angle.UndefinedAngle
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
-        case LAT => lat = Degrees(unQuotedValue.toDouble)
-        case LON => lon = Degrees(unQuotedValue.toDouble)
+        case LAT => lat = Degrees(unQuotedValue.toDouble).toNormalizedLatitude
+        case LON => lon = Degrees(unQuotedValue.toDouble).toNormalizedLongitude
         case _ => // ignore other members
       }
-      Some(SentinelGpsReading(deviceId,sensorNo,date,lat,lon))
+      Some(SentinelGpsReading(deviceId,sensorNo,recordId,date,lat,lon))
     } else if (isNull) None
     else throw exception("expected object value")
   }
 }
 
-case class SentinelGyroReading (deviceId: String, sensorNo: Int, date: DateTime, gx: Double, gy: Double, gz: Double) extends SentinelSensorReading {
+case class SentinelGyroReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, gx: Double, gy: Double, gz: Double) extends SentinelSensorReading {
   def readingType = GYRO
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(GX, gx)
     w.writeDoubleMember(GY, gy)
     w.writeDoubleMember(GZ, gz)
@@ -164,33 +174,27 @@ case class SentinelGyroReading (deviceId: String, sensorNo: Int, date: DateTime,
      }
  */
 trait SentinelGyroParser extends UTF8JsonPullParser {
-  def parseGyroValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGyroReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseGyroValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelGyroReading] = {
     var gx: Double = 0
     var gy: Double = 0
     var gz: Double = 0
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
         case GX => gx = unQuotedValue.toDouble
         case GY => gy = unQuotedValue.toDouble
         case GZ => gz = unQuotedValue.toDouble
         case _ => // ignore other members
       }
-      Some(SentinelGyroReading(deviceId,sensorNo,date,gx,gy,gz))
+      Some(SentinelGyroReading(deviceId,sensorNo,recordId,date,gx,gy,gz))
     } else if (isNull) None
     else throw exception("expected object value")
   }
 }
 
-case class SentinelMagReading (deviceId: String, sensorNo: Int, date: DateTime, mx: Double, my: Double, mz: Double) extends SentinelSensorReading {
+case class SentinelMagReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, mx: Double, my: Double, mz: Double) extends SentinelSensorReading {
   def readingType = MAG
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(MX, mx)
     w.writeDoubleMember(MY, my)
     w.writeDoubleMember(MZ, mz)
@@ -209,33 +213,27 @@ case class SentinelMagReading (deviceId: String, sensorNo: Int, date: DateTime, 
      }
  */
 trait SentinelMagParser extends UTF8JsonPullParser {
-  def parseMagValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelMagReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseMagValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelMagReading] = {
     var mx: Double = 0
     var my: Double = 0
     var mz: Double = 0
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
         case MX => mx = unQuotedValue.toDouble
         case MY => my = unQuotedValue.toDouble
         case MZ => mz = unQuotedValue.toDouble
         case _ => // ignore other members
       }
-      Some(SentinelMagReading(deviceId,sensorNo,date,mx,my,mz))
+      Some(SentinelMagReading(deviceId,sensorNo,recordId,date,mx,my,mz))
     } else if (isNull) None
     else throw exception("expected object value")
   }
 }
 
-case class SentinelAccelReading (deviceId: String, sensorNo: Int, date: DateTime, ax: Double, ay: Double, az: Double) extends SentinelSensorReading {
+case class SentinelAccelReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, ax: Double, ay: Double, az: Double) extends SentinelSensorReading {
   def readingType = ACCEL
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(AX, ax)
     w.writeDoubleMember(AY, ay)
     w.writeDoubleMember(AZ, az)
@@ -253,33 +251,27 @@ case class SentinelAccelReading (deviceId: String, sensorNo: Int, date: DateTime
      }
  */
 trait SentinelAccelParser extends UTF8JsonPullParser {
-  def parseAccelValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelAccelReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseAccelValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelAccelReading] = {
     var ax: Double = 0
     var ay: Double = 0
     var az: Double = 0
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
         case AX => ax = unQuotedValue.toDouble
         case AY => ay = unQuotedValue.toDouble
         case AZ => az = unQuotedValue.toDouble
         case _ => // ignore other members
       }
-      Some(SentinelAccelReading(deviceId,sensorNo,date,ax,ay,az))
+      Some(SentinelAccelReading(deviceId,sensorNo,recordId,date,ax,ay,az))
     } else if (isNull) None
     else throw exception("expected object value")
   }
 }
 
-case class SentinelGasReading (deviceId: String, sensorNo: Int, date: DateTime, gas: Long, humidity: Double, pressure: Double, alt: Double) extends SentinelSensorReading {
+case class SentinelGasReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, gas: Long, humidity: Double, pressure: Double, alt: Double) extends SentinelSensorReading {
   def readingType = GAS
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeLongMember(GAS, gas)
     w.writeDoubleMember(HUM, humidity)
     w.writeDoubleMember(PRESS, pressure)
@@ -300,35 +292,29 @@ case class SentinelGasReading (deviceId: String, sensorNo: Int, date: DateTime, 
             },
  */
 trait SentinelGasParser extends UTF8JsonPullParser {
-  def parseGasValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelGasReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseGasValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelGasReading] = {
     var gas: Long = 0
     var humidity: Double = 0
     var pressure: Double = 0
     var altitude: Double = 0
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
         case GAS => gas = unQuotedValue.toLong
         case HUM => humidity = unQuotedValue.toDouble
         case PRESS => pressure = unQuotedValue.toDouble
         case ALT => altitude = unQuotedValue.toDouble
         case _ => // ignore other members
       }
-      Some(SentinelGasReading(deviceId,sensorNo,date,gas,humidity,pressure,altitude))
+      Some(SentinelGasReading(deviceId,sensorNo,recordId,date,gas,humidity,pressure,altitude))
     } else if (isNull) None
     else throw exception("expected object value")
   }
 }
 
-case class SentinelThermoReading (deviceId: String, sensorNo: Int, date: DateTime, temp: Temperature) extends SentinelSensorReading {
+case class SentinelThermoReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, temp: Temperature) extends SentinelSensorReading {
   def readingType = THERMO
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(TEMP, temp.toCelsius)
   }
 
@@ -343,29 +329,23 @@ case class SentinelThermoReading (deviceId: String, sensorNo: Int, date: DateTim
             },
  */
 trait SentinelThermoParser extends UTF8JsonPullParser {
-  def parseThermoValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelThermoReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseThermoValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelThermoReading] = {
     var temp = UndefinedTemperature
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
         case TEMP => temp = Celsius(unQuotedValue.toDouble)
         case _ => // ignore other members
       }
-      Some(SentinelThermoReading(deviceId,sensorNo,date,temp))
+      Some(SentinelThermoReading(deviceId,sensorNo,recordId,date,temp))
     } else if (isNull) None
     else throw exception("expected object value")
   }
 }
 
-case class SentinelVocReading (deviceId: String, sensorNo: Int, date: DateTime, tvoc: Int, eco2: Int) extends SentinelSensorReading {
+case class SentinelVocReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, tvoc: Int, eco2: Int) extends SentinelSensorReading {
   def readingType = VOC
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeIntMember(TVOC, tvoc)
     w.writeIntMember(ECO2, eco2)
   }
@@ -382,31 +362,25 @@ case class SentinelVocReading (deviceId: String, sensorNo: Int, date: DateTime, 
             },
  */
 trait SentinelVocParser extends UTF8JsonPullParser {
-  def parseVocValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelVocReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseVocValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelVocReading] = {
     var tvoc: Int = 0
     var eco2: Int = 0
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
         case TEMP => tvoc = unQuotedValue.toInt
         case ECO2 => eco2 = unQuotedValue.toInt
         case _ => // ignore other members
       }
-      Some(SentinelVocReading(deviceId,sensorNo,date,tvoc,eco2))
+      Some(SentinelVocReading(deviceId,sensorNo,recordId,date,tvoc,eco2))
     } else if (isNull) None
     else throw exception("expected object value")
   }
 }
 
-case class SentinelAnemoReading(deviceId: String, sensorNo: Int, date: DateTime, dir: Angle, spd: Speed) extends SentinelSensorReading {
+case class SentinelAnemoReading(deviceId: String, sensorNo: Int, recordId: String, date: DateTime, dir: Angle, spd: Speed) extends SentinelSensorReading {
   def readingType = ANEMO
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(ANGLE, dir.toDegrees)
     w.writeDoubleMember(SPD, spd.toMetersPerSecond)
   }
@@ -423,31 +397,25 @@ case class SentinelAnemoReading(deviceId: String, sensorNo: Int, date: DateTime,
             },
  */
 trait SentinelAnemoParser extends UTF8JsonPullParser {
-  def parseWindValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelAnemoReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseWindValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelAnemoReading] = {
     var angle = Angle.UndefinedAngle
     var speed = Speed.UndefinedSpeed
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
         case ANGLE => angle = Degrees(unQuotedValue.toDouble)
         case SPD => speed = MetersPerSecond(unQuotedValue.toDouble)
         case _ => // ignore other members
       }
-      Some(SentinelAnemoReading(deviceId,sensorNo,date,angle,speed))
+      Some(SentinelAnemoReading(deviceId,sensorNo,recordId,date,angle,speed))
     } else if (isNull) None
     else throw exception("expected object value")
   }
 }
 
-case class SentinelFireReading (deviceId: String, sensorNo: Int, date: DateTime, prob: Double) extends SentinelSensorReading {
+case class SentinelFireReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, prob: Double) extends SentinelSensorReading {
   def readingType = FIRE
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
     w.writeDoubleMember(PROB, prob)
   }
 
@@ -462,64 +430,14 @@ case class SentinelFireReading (deviceId: String, sensorNo: Int, date: DateTime,
             },
  */
 trait SentinelFireParser extends UTF8JsonPullParser {
-  def parseFireValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelFireReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
+  def parseFireValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelFireReading] = {
     var prob: Double = 0
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
         case PROB => prob = unQuotedValue.toDouble
         case _ => // ignore other members
       }
-      Some(SentinelFireReading(deviceId,sensorNo,date,prob))
-    } else if (isNull) None
-    else throw exception("expected object value")
-  }
-}
-
-case class SentinelCameraReading (deviceId: String, sensorNo: Int, date: DateTime, isIR: Boolean, path: String, recordId: Long) extends SentinelSensorReading {
-  def readingType = CAMERA
-
-  def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    w.writeDateTimeMember(TIME_RECORDED, date)
-    w.writeBooleanMember(IR,isIR)
-    w.writeStringMember(PATH,path)
-    w.writeLongMember(RECORD_ID,recordId)
-  }
-
-  def copyWithDate(newDate: DateTime): SentinelCameraReading = copy(date = newDate)
-}
-
-/**
- * parses value 'null' or:
-           {
-                "filename": "./camera/4c292b0c-a270-4015-a9f6-006fc8641f73.webp",
-                "isInfrared": true,
-                "recordId": 1065944
-            }
- */
-trait SentinelCameraParser extends UTF8JsonPullParser {
-  def parseCameraValue(deviceId: String, defaultSensor: Int, defaultDate: DateTime): Option[SentinelCameraReading] = {
-    var date = defaultDate
-    var sensorNo = defaultSensor
-    var isIR: Boolean = false
-    var filename: String = null
-    var recordId: Long = -1
-
-    if (isInObject) {
-      foreachMemberInCurrentObject {
-        case TIME_RECORDED => date = dateTimeValue
-        case SENSOR_NO => sensorNo = unQuotedValue.toInt
-        case IR => isIR = unQuotedValue.toBoolean
-        case PATH => filename = quotedValue.asString
-        case RECORD_ID => recordId = unQuotedValue.toLong
-        case _ => // ignore other members
-      }
-      filename = s"camera/$recordId.webp"  // FIXME - until we retrieve them from the sentinel server we just use the recordId
-      Some(SentinelCameraReading(deviceId,sensorNo,date,isIR,filename,recordId))
+      Some(SentinelFireReading(deviceId,sensorNo,recordId,date,prob))
     } else if (isNull) None
     else throw exception("expected object value")
   }
@@ -529,4 +447,75 @@ trait SentinelCameraParser extends UTF8JsonPullParser {
  * event type we use to publish image data received from the sentinel server
  * note these can get quite large so data should be stored in files
  */
-case class SentinelImage (cameraReading: SentinelCameraReading, data: Array[Byte], contentType: ContentType)
+case class SentinelImage (cameraReading: SentinelImageReading, data: Array[Byte], contentType: ContentType)
+
+
+//--- new record formats (TODO - we need to update serialization)
+
+/**
+ * new "smoke" record
+ */
+case class SentinelSmokeReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, prob: Double) extends SentinelSensorReading {
+  def readingType = SMOKE
+
+  def serializeDataTo(w: JsonWriter): Unit = {
+    w.writeDoubleMember(SMOKE_PROB,prob)
+  }
+
+  def copyWithDate(newDate: DateTime): SentinelSmokeReading = copy(date = newDate)
+}
+
+/**
+ *  "smoke":{"smokeProb":0.07105258107185364}
+ */
+trait SentinelSmokeParser extends UTF8JsonPullParser {
+  def parseSmokeValue (deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelSmokeReading] = {
+    var prob: Double = Double.NaN
+    if (isInObject) {
+      foreachMemberInCurrentObject {
+        case SMOKE_PROB => prob = unQuotedValue.toDouble
+        case _ => // ignore
+      }
+      if (prob.isNaN) None else Some(SentinelSmokeReading(deviceId,sensorNo,recordId,date,prob))
+    } else if (isNull) None
+    else throw exception("expected smoke object value")
+  }
+}
+
+/**
+ * new "image" record
+ */
+case class SentinelImageReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, fileName: String, isInfrared: Boolean) extends SentinelSensorReading {
+  def readingType = IMAGE
+
+  def serializeDataTo(w: JsonWriter): Unit = {
+    w.writeStringMember(FILENAME, s"$IMAGE_PREFIX/$fileName")
+    w.writeBooleanMember(IS_INFRARED,isInfrared)
+  }
+
+  def copyWithDate(newDate: DateTime): SentinelImageReading = copy(date = newDate)
+}
+
+/**
+ * "image":{
+ *   "filename": "./__image/e3bd4676-9d97-417b-9c6ec7295a96e470.webp",
+ *   "isInfrared": true,
+ *   "confNo": null
+ *  }
+ */
+trait SentinelImageParser extends UTF8JsonPullParser {
+  def parseImageValue (deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelImageReading] = {
+    var fileName: String = null
+    var isInfrared = false
+
+    if (isInObject) {
+      foreachMemberInCurrentObject {
+        case FILENAME => fileName = FileUtils.filename(quotedValue.toString()) // we remove the path portion
+        case IS_INFRARED => isInfrared = unQuotedValue.toBoolean
+        case _ => // confNo ?
+      }
+      if (fileName != null) Some(SentinelImageReading(deviceId, sensorNo, recordId,date, fileName, isInfrared)) else None
+    } else if (isNull) None
+    else throw exception("expected image object value")
+  }
+}

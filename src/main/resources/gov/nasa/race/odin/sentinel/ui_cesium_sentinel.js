@@ -43,6 +43,19 @@ class SentinelAssets {
         this.details = details; // gas coverage, camera-coverage, wind
         this.fire = undefined;
     }
+
+    updatePosition(lat,lon) {
+        if (this.symbol) {
+            this.symbol.position = Cesium.Cartesian3.fromDegrees(lon, lat)
+        }
+    }
+
+    showAssets (cond) {
+        // TODO - is this right? we should just add/remove the sentinelDataSource
+        if (this.symbol) this.symbol.show = cond;
+        if (this.details) this.details.show = cond;
+        if (this.fire) this.fire.show = cond;
+    }
 }
 
 class SentinelEntry {
@@ -80,7 +93,12 @@ class SentinelEntry {
             if (assets.fire) assets.fire.show = showIt;
         }
     }
+
+    showAssets(cond) {
+        if (this.assets) this.assets.showAssets(cond);
+    }
 }
+
 
 ui.registerLoadFunction(function initialize() {
     uiCesium.addDataSource(sentinelDataSource);
@@ -90,15 +108,21 @@ ui.registerLoadFunction(function initialize() {
     uiCesium.setEntitySelectionHandler(sentinelSelection);
     ws.addWsHandler(config.wsUrl, handleWsSentinelMessages);
 
+    uiCesium.initLayerPanel("sentinel", config.sentinel, showSentinels);
     console.log("ui_cesium_sentinel initialized");
 });
+
+function showSentinels (cond) {
+    sentinelEntries.forEach( e=> e.showAssets(cond));
+    uiCesium.requestRender();
+}
 
 function initSentinelView() {
     let view = ui.getList("sentinel.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
             { name: "show", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.showDetails, toggleShowDetails, null) },
-            { name: "id", width: "2rem", attrs: ["alignLeft"], map: e => e.id },
+            { name: "id", width: "4rem", attrs: ["alignLeft"], map: e => e.id },
             { name: "alert", width: "1.5rem", attrs: [], map: e => e.alertStatus() },
             { name: "prob", width: "3rem", attrs: ["fixed"], map: e => e.fireStatus() },
             { name: "images", width: "2rem", attrs: [], map: e => e.imageStatus() },
@@ -123,9 +147,8 @@ function initSentinelImagesView() {
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
             { name: "show", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.window, toggleShowImage, null) },
-            { name: "name", width: "5rem", attrs: [], map: e => e.recordId },
             { name: "sensor", width: "2rem", attrs: [], map: e => e.sensorNo },
-            { name: "type", width: "2rem", attrs: [], map: e => e.ir ? "ir" : "v" },
+            { name: "type", width: "2rem", attrs: [], map: e => e.isInfrared ? "ir" : "v" },
             { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
         ]);
     }
@@ -183,7 +206,6 @@ function handleWsSentinelMessages(msgType, msg) {
 }
 
 function handleSentinelsMessage(sentinels) {
-    //console.log(JSON.stringify(sentinels));
     sentinelEntries.clear();
 
     sentinels.forEach(sentinel => addSentinelEntry(sentinel));
@@ -202,44 +224,62 @@ function addSentinelEntry(sentinel) {
 
 function handleSentinelUpdatesMessage(sentinelUpdates) {
     sentinelUpdates.forEach(su => {
-        let u = su.sentinelReading;
-        let id = u.deviceId;
+        let r = su.sentinelReading;
+        let id = r.deviceId;
         let e = sentinelEntries.get(id);
         if (e) {
             let sentinel = e.sentinel;
-            Object.keys(u).forEach(k => {
+            Object.keys(r).forEach(k => {
                 switch (k) {
                     case 'fire':
-                        sentinel.fire = u.fire;
-                        sentinel.timeRecorded = u.fire.timeRecorded;
+                        sentinel.fire = r.fire;
+                        sentinel.timeRecorded = r.timeRecorded;
                         checkFireAsset(e);
                         if (e == selectedSentinelEntry) setFireData(sentinel);
                         break;
-                    case 'camera':
-                        sentinel.images = (sentinel.images) ? util.prependElement(u.camera, sentinel.images) : [u.camera];
-                        sentinel.timeRecorded = u.camera.timeRecorded;
+                    case 'smoke':
+                        sentinel.smoke = r.smoke;
+                        sentinel.timeRecorded = r.timeRecorded;
+                        //checkFireAsset(e);
+                        if (e == selectedSentinelEntry) setSmokeData(sentinel);
+                        break;
+                    case 'image':
+                        //console.log("@@@ " + JSON.stringify(r));
+                        let img = r.image;
+                        img.sensorNo = r.sensorNo;
+                        img.timeRecorded = r.timeRecorded;
+
+                        sentinel.images = (sentinel.images) ? util.prependElement(img, sentinel.images) : [img];
+                        sentinel.timeRecorded = r.timeRecorded;
                         if (e == selectedSentinelEntry) ui.setListItems(sentinelImagesView, sentinel.images);
                         break;
                     case 'anemometer':
-                        sentinel.anemometer = u.anemometer;
-                        sentinel.timeRecorded = u.anemometer.timeRecorded;
+                        sentinel.anemometer = r.anemometer;
+                        sentinel.timeRecorded = r.timeRecorded;
                         if (e == selectedSentinelEntry) setAnemoData(sentinel);
                         break;
                     case 'gas':
-                        sentinel.gas = u.gas;
-                        sentinel.timeRecorded = u.gas.timeRecorded;
+                        sentinel.gas = r.gas;
+                        sentinel.timeRecorded = r.timeRecorded;
                         if (e == selectedSentinelEntry) setGasData(sentinel);
                         break;
                     case 'thermometer':
-                        sentinel.thermometer = u.thermometer;
-                        sentinel.timeRecorded = u.thermometer.timeRecorded;
+                        sentinel.thermometer = r.thermometer;
+                        sentinel.timeRecorded = r.timeRecorded;
                         if (e == selectedSentinelEntry) setThermoData(sentinel);
                         break;
                     case 'voc':
-                        sentinel.voc = u.voc;
-                        sentinel.timeRecorded = u.voc.timeRecorded;
+                        sentinel.voc = r.voc;
+                        sentinel.timeRecorded = r.timeRecorded;
                         if (e == selectedSentinelEntry) setVocData(sentinel);
                         break;
+                    case 'gps':
+                        if (!sentinel.gps || (sentinel.gps.lat != r.gps.lat) || (sentinel.gps.lon != r.gps.lon)) {
+                            sentinel.gps = r.gps;
+                            sentinel.timeRecorded = r.timeRecorded;
+                            if (sentinel.assets) sentinel.assets.updatePosition(r.gps.lat, r.gps.lon);
+                        }
+
                 }
             });
             ui.updateListItem(sentinelView, e);
@@ -374,31 +414,37 @@ function tRec(sentinelReading) {
 
 function setFireData(sentinel) {
     ui.setField("sentinel.data.fire", sentinel.fire ?
-        `${tRec(sentinel.fire)} : prob: ${(sentinel.fire.fireProb * 100).toFixed(0)}%` : "");
+        `${tRec(sentinel.fire)} prob: ${(sentinel.fire.fireProb * 100).toFixed(0)}%` : "");
+}
+
+function setSmokeData(sentinel) {
+    ui.setField("sentinel.data.smoke", sentinel.smoke ?
+        `${tRec(sentinel.smoke)} prob: ${(sentinel.smoke.smokeProb * 100).toFixed(0)}%` : "");
 }
 
 function setAnemoData(sentinel) {
     ui.setField("sentinel.data.anemo", sentinel.anemometer ?
-        `${tRec(sentinel.anemometer)} : spd: ${sentinel.anemometer.speed.toFixed(1)}m/s, dir: ${sentinel.anemometer.angle.toFixed(0)}°` : "");
+        `${tRec(sentinel.anemometer)} spd: ${sentinel.anemometer.speed.toFixed(1)}m/s, dir: ${sentinel.anemometer.angle.toFixed(0)}°` : "");
 }
 
 function setGasData(sentinel) {
     ui.setField("sentinel.data.gas", sentinel.gas ?
-        `${tRec(sentinel.gas)} : hum: ${sentinel.gas.hummidity.toFixed(0)}%, pres: ${sentinel.gas.pressure.toFixed(1)}hPa` : "");
+        `${tRec(sentinel.gas)} hum: ${sentinel.gas.hummidity.toFixed(0)}%, pres: ${sentinel.gas.pressure.toFixed(1)}hPa` : "");
 }
 
 function setThermoData(sentinel) {
     ui.setField("sentinel.data.thermo", sentinel.thermometer ?
-        `${tRec(sentinel.thermometer)} : temp: ${sentinel.thermometer.temperature.toFixed(1)}°C` : "");
+        `${tRec(sentinel.thermometer)} temp: ${sentinel.thermometer.temperature.toFixed(1)}°C` : "");
 }
 
 function setVocData(sentinel) {
     ui.setField("sentinel.data.voc", sentinel.voc ?
-        `${tRec(sentinel.voc)} : TVOC: ${sentinel.voc.TVOC}ppb, eCO2: ${sentinel.voc.eCO2}ppm` : "");
+        `${tRec(sentinel.voc)} TVOC: ${sentinel.voc.TVOC}ppb, eCO2: ${sentinel.voc.eCO2}ppm` : "");
 }
 
 function setDataFields(sentinel) {
     setFireData(sentinel);
+    setSmokeData(sentinel);
     setAnemoData(sentinel);
     setGasData(sentinel);
     setThermoData(sentinel);

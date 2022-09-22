@@ -38,7 +38,7 @@ class SentinelReplayActor (val config: Config) extends Replayer[TaggedArchiveRea
 
     override protected def parseEntryData(limit: Int): Any = {
       if (initialize(buf,limit)) {
-        val sensorReadings = parse()
+        val sensorReadings = parseRecords()
         if (sensorReadings.nonEmpty) Some(SentinelUpdates(sensorReadings)) else None
       } else None
     }

@@ -29,6 +29,7 @@ import gov.nasa.race.core.BusEvent
 import gov.nasa.race.http.{CachedFileAssetMap, HttpServer, PushWSRaceRoute, ResponseData, WSContext}
 import gov.nasa.race.cesium.CesiumRoute
 import gov.nasa.race.ifSome
+import gov.nasa.race.odin.sentinel.SentinelSensorReading.IMAGE_PREFIX
 import gov.nasa.race.ui.{extModule, uiButton, uiField, uiFieldGroup, uiIcon, uiList, uiNumField, uiPanel, uiRowContainer, uiWindow}
 import gov.nasa.race.util.FileUtils
 import scalatags.Text
@@ -60,6 +61,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   var sentinelsMsg: Option[TextMessage.Strict] = None
 
   val sentinelDir = config.getString("sentinel.dir")
+  val imageDir = FileUtils.ensureWritableDir(config.getStringOrElse("sentinel.image-dir", s"tmp/delphire/$IMAGE_PREFIX")).get
   val sentinelAssets = getSymbolicAssetMap("sentinel.assets", config, 
                                            Seq(("sentinel","sentinel-sym.png"), ("fire","fire.png")))
   
@@ -69,7 +71,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   }
 
   def getSentinelImage (pathName: String): Option[HttpEntity.Strict] = {
-    FileUtils.fileContentsAsBytes(s"$sentinelDir/images/$pathName").map( bs=> ResponseData.forExtension( FileUtils.getExtension(pathName), bs))
+    FileUtils.fileContentsAsBytes(s"$imageDir/$pathName").map( bs=> ResponseData.forExtension( FileUtils.getExtension(pathName), bs))
   }
 
   //--- route
@@ -81,7 +83,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
           completeWithSymbolicAsset(p.toString, sentinelAssets)
         }
       } ~
-      pathPrefix("camera" ~ Slash) {
+      pathPrefix( IMAGE_PREFIX ~ Slash) {
         extractUnmatchedPath { p =>
           getSentinelImage(p.toString()) match { // we load them automatically
             case Some(content) => complete(content)
@@ -103,15 +105,18 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   }
 
   def sentinelConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
-    val labelOffsetX = config.getIntOrElse("sentinel.label-offset.x", 8)
-    val labelOffsetY = config.getIntOrElse("sentinel.label-offset.y", 0)
+    val cfg = config.getConfig("sentinel")
+
+    val labelOffsetX = cfg.getIntOrElse("label-offset.x", 8)
+    val labelOffsetY = cfg.getIntOrElse("label-offset.y", 0)
 
     s"""export const sentinel = {
-  color: Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinel.color", "chartreuse")}'),
-  alertColor: Cesium.Color.fromCssColorString('${config.getStringOrElse("sentinel.alert-color", "deeppink")}'),
+  ${cesiumLayerConfig(cfg, "/fire/detection/Sentinel", "stationary Sentinel fire sensors")},
+  color: Cesium.Color.fromCssColorString('${cfg.getStringOrElse("color", "chartreuse")}'),
+  alertColor: Cesium.Color.fromCssColorString('${cfg.getStringOrElse("alert-color", "deeppink")}'),
   labelOffset: new Cesium.Cartesian2( $labelOffsetX, $labelOffsetY),
   billboardDC: new Cesium.DistanceDisplayCondition( 0, 200000),
-  imageWidth: ${config.getIntOrElse("sentinel.img-width", 400)},
+  imageWidth: ${cfg.getIntOrElse("img-width", 400)},
 };"""
     //... and more to follow
   }
@@ -120,10 +125,12 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
 
   def uiSentinelWindow(title: String="Sentinels"): Text.TypedTag[String] = {
     uiWindow(title, "sentinel", "sentinel-icon.svg")(
+      cesiumLayerPanel("sentinel", "main.toggleShowSentinel(event)"),
       uiList("sentinel.list", 10, "main.selectSentinel(event)"),
       uiPanel("data", false)(
         uiFieldGroup(labelWidth="5rem", width="18rem") (
           uiField("fire", "sentinel.data.fire", isFixed = true),
+          uiField("smoke", "sentinel.data.smoke", isFixed = true),
           uiField("wind", "sentinel.data.anemo", isFixed = true),
           uiField("gas", "sentinel.data.gas", isFixed = true),
           uiField("thermo", "sentinel.data.thermo", isFixed = true),
@@ -155,7 +162,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   // called from our DataClient actor
   // NOTE - this is called from the actor thread, beware of data races
   def receiveSentinelData: Receive = {
-    case BusEvent(channel,rdgs: SentinelUpdates,_) =>
+    case BusEvent(_,rdgs: SentinelUpdates,_) =>
       synchronized {
         val msg = writer.clear().toJson( rdgs)
         push(TextMessage.Strict(msg))

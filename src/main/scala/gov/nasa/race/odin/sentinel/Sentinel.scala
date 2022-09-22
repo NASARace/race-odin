@@ -24,13 +24,14 @@ import gov.nasa.race.{Dated, ifSome}
 import scala.collection.mutable.ArrayBuffer
 import SentinelSensorReading._
 
+import scala.collection.mutable
+
 /**
  * Sentinel data model for Delphire's powerline fire sensors (see https://delphiretech.com/).
  */
 object Sentinel {
 
   //--- lexical constants
-  val ID = asc("id")
   val DATA = asc("data")
   val IMAGES = asc("images")
   val INFO = asc("info")
@@ -40,6 +41,8 @@ object Sentinel {
   val CONFS = asc("camConfs")
   val CLAIMS = asc("claims")
   val EVIDENCE = asc("evidences")
+  val JOINED = asc("joined")
+  val NEW_RECORD = asc("NewRecord")
 
   def writeReadingMemberTo (w: JsonWriter, name: CharSequence, date: DateTime)(f: JsonWriter=>Unit): Unit = {
     w.writeObjectMember(name) { w =>
@@ -66,7 +69,8 @@ case class Sentinel (
                       voc: Option[SentinelVocReading] = None,
                       anemo: Option[SentinelAnemoReading] = None,
                       fire: Option[SentinelFireReading] = None,
-                      images: Seq[SentinelCameraReading] = Seq.empty
+                      smoke: Option[SentinelSmokeReading] = None,
+                      images: Seq[SentinelImageReading] = Seq.empty
                ) extends Dated with JsonSerializable {
 
   def serializeMembersTo (w: JsonWriter): Unit = {
@@ -82,11 +86,10 @@ case class Sentinel (
     ifSome(voc){ _.serializeAsMemberTo(w) }
     ifSome(anemo){ _.serializeAsMemberTo(w) }
     ifSome(fire){ _.serializeAsMemberTo(w) }
+    ifSome(smoke){ _.serializeAsMemberTo(w) }
 
     if (images.nonEmpty) {
-      w.writeArrayMember(IMAGES) { w=>
-        images.foreach( img=> w.writeObject( img.serializeMembersTo))
-      }
+      w.writeArrayMember(IMAGES) { w=> images.foreach( _.serializeAsElementTo(w)) }
     }
   }
 
@@ -103,11 +106,12 @@ case class Sentinel (
       case r: SentinelVocReading => copy(date=r.date, voc=Some(r))
       case r: SentinelAnemoReading => copy(date=r.date, anemo=Some(r))
       case r: SentinelFireReading => copy(date=r.date, fire=Some(r))
-      case r: SentinelCameraReading => copy(date=r.date, images=addImage(r))
+      case r: SentinelSmokeReading => copy(date=r.date, smoke=Some(r))
+      case r: SentinelImageReading => copy(date=r.date, images=addImage(r))
     }
   }
 
-  def addImage (r: SentinelCameraReading): Seq[SentinelCameraReading] = {
+  def addImage (r: SentinelImageReading): Seq[SentinelImageReading] = {
     // TODO - we probably want to cap the list size
     r +: images
   }
@@ -129,9 +133,10 @@ case class Sentinel (
  */
 class SentinelParser extends UTF8JsonPullParser
     with SentinelAccelParser with SentinelAnemoParser with SentinelGasParser with SentinelMagParser with SentinelThermoParser
-    with SentinelFireParser with SentinelGyroParser with SentinelCameraParser with SentinelVocParser with SentinelGpsParser {
+    with SentinelFireParser with SentinelGyroParser with SentinelVocParser with SentinelGpsParser
+    with SentinelSmokeParser with SentinelImageParser {
 
-  def parse(): Seq[SentinelSensorReading] = {
+  def parseRecords(): Seq[SentinelSensorReading] = {
     val updates = ArrayBuffer.empty[SentinelSensorReading]
     var recordId: String = null
     var deviceId: String = null
@@ -161,17 +166,17 @@ class SentinelParser extends UTF8JsonPullParser
             case DEVICE_ID => deviceId = value.intern // ditto
             case SENSOR_NO => sensorId = unQuotedValue.toInt
             case TIME_RECORDED => timeRecorded = dateTimeValue
-
-            case GPS => appendSomeRecording( parseGpsValue( deviceId, sensorId, timeRecorded))
-            case GAS => appendSomeRecording( parseGasValue( deviceId, sensorId, timeRecorded))
-            case ACCEL => appendSomeRecording( parseAccelValue( deviceId, sensorId, timeRecorded))
-            case ANEMO => appendSomeRecording( parseWindValue( deviceId, sensorId, timeRecorded))
-            case GYRO => appendSomeRecording( parseGyroValue( deviceId, sensorId, timeRecorded))
-            case THERMO => appendSomeRecording( parseThermoValue( deviceId, sensorId, timeRecorded))
-            case MAG => appendSomeRecording( parseMagValue( deviceId, sensorId, timeRecorded))
-            case FIRE => appendSomeRecording( parseFireValue( deviceId, sensorId, timeRecorded))
-            case VOC => appendSomeRecording( parseVocValue( deviceId, sensorId, timeRecorded))
-            case CAMERA => appendSomeRecording( parseCameraValue( deviceId, sensorId, timeRecorded))
+            case GPS => appendSomeRecording( parseGpsValue( deviceId, sensorId, recordId, timeRecorded))
+            case GAS => appendSomeRecording( parseGasValue( deviceId, sensorId, recordId, timeRecorded))
+            case ACCEL => appendSomeRecording( parseAccelValue( deviceId, sensorId, recordId, timeRecorded))
+            case ANEMO => appendSomeRecording( parseWindValue( deviceId, sensorId, recordId, timeRecorded))
+            case GYRO => appendSomeRecording( parseGyroValue( deviceId, sensorId, recordId, timeRecorded))
+            case THERMO => appendSomeRecording( parseThermoValue( deviceId, sensorId, recordId, timeRecorded))
+            case MAG => appendSomeRecording( parseMagValue( deviceId, sensorId, recordId, timeRecorded))
+            case FIRE => appendSomeRecording( parseFireValue( deviceId, sensorId, recordId, timeRecorded))
+            case VOC => appendSomeRecording( parseVocValue( deviceId, sensorId, recordId, timeRecorded))
+            case SMOKE => appendSomeRecording( parseSmokeValue(deviceId, sensorId, recordId, timeRecorded))
+            case IMAGE => appendSomeRecording( parseImageValue(deviceId, sensorId, recordId, timeRecorded))
 
             case CLAIMS => skipPastAggregate()
             case EVIDENCE => skipPastAggregate()
@@ -185,7 +190,6 @@ class SentinelParser extends UTF8JsonPullParser
     updates.toSeq
   }
 
-  case class SentinelDeviceInfo (deviceId: String, info: String)
 
   /**
    * until device/recordIds are properly separated we have to parse this separately. The silver lining is
@@ -219,8 +223,6 @@ class SentinelParser extends UTF8JsonPullParser
     deviceList.toSeq
   }
 
-  case class SentinelSensorInfo (sensorNo: Int, partNo: String, capabilities: Seq[String])
-
   /**
    * another initialization message to get sensors for a given device - see parseDevices()
    *   {
@@ -251,13 +253,74 @@ class SentinelParser extends UTF8JsonPullParser
             case CONFS => skipPastAggregate() // ignore for now
             case CAPS => caps = readCurrentStringArray()
           }
-          if (sensorNo >= 0) sensorList += SentinelSensorInfo(sensorNo,part,caps)
+          if (sensorNo >= 0 && caps.nonEmpty) {
+            val capRecs = caps.foldLeft(mutable.Map.empty[CharSequence,String]) { (acc,c) => acc += (c -> "")}
+            sensorList += SentinelSensorInfo( sensorNo, part, capRecs)
+          }
         }
       case _ => // ignore other members
     }
 
     sensorList.toSeq
   }
+
+  /**
+   * parse sensor record notification messages (received through websocket). There are currently two message types:
+   *
+   * { "joined":["dizwqq96w36j"] }
+   * { "NewRecord":{"deviceId":"dizwqq96w36j", "sensorNo":0, "type":"magnetometer"}}
+   *
+   * TODO - this should use regular syntax
+   */
+  def parseNotification(): Option[SentinelNotification] = {
+    ensureNextIsObjectStart()
+    foreachMemberInCurrentObject {
+      case JOINED => return parseSentinelJoinNotification()
+      case NEW_RECORD => return parseSentinelRecordNotification()
+      case other => warning(s"ignore unknown notification '$other''");
+    }
+    None
+  }
+
+  def parseSentinelJoinNotification(): Option[SentinelJoinNotification] = {
+    val devIds = readCurrentStringArray()
+    if (devIds.nonEmpty) Some(SentinelJoinNotification(devIds)) else None
+  }
+
+  def parseSentinelRecordNotification(): Option[SentinelRecordNotification] = {
+    var deviceId: String = null
+    var sensorNo: Int = -1
+    var sensorType: String = null
+
+    foreachMemberInCurrentObject {
+      case DEVICE_ID => deviceId = quotedValue.intern
+      case SENSOR_NO => sensorNo = unQuotedValue.toInt
+      case SENSOR_TYPE => sensorType = quotedValue.intern
+    }
+
+    if (deviceId != null && sensorNo >= 0 && sensorType != null) Some(SentinelRecordNotification(deviceId,sensorNo,sensorType)) else None
+  }
 }
 
+/**
+ * struct we get from a device query response
+ */
+case class SentinelDeviceInfo (deviceId: String, info: String)
 
+/**
+ * struct we populate from a sensor query response and use to keep track of last received sensor records
+ * capabilities is a map sensorType -> recordId
+ */
+case class SentinelSensorInfo (sensorNo: Int, partNo: String, capabilities: mutable.Map[CharSequence,String])
+
+trait SentinelNotification
+
+/**
+ * notification about successful join for device/sensor update notifications
+ */
+case class SentinelJoinNotification (deviceIds: Seq[String]) extends SentinelNotification
+
+/**
+ * notification that there is a new sensor record available
+ */
+case class SentinelRecordNotification(devideId: String, sensorNo: Int, sensorCapability: String) extends SentinelNotification

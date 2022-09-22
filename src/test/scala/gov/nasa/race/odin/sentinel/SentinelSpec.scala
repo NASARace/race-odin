@@ -16,7 +16,7 @@ class SentinelSpec extends AnyFlatSpec with RaceSpec {
 
     val parser = new SentinelParser()
     parser.initialize(input.getBytes)
-    val updates = parser.parse()
+    val updates = parser.parseRecords()
 
     println(s"got ${updates.length} updates")
     updates.foreach(println)
@@ -53,7 +53,31 @@ class SentinelSpec extends AnyFlatSpec with RaceSpec {
 
     val parser = new SentinelParser()
     parser.initialize(input.getBytes)
-    val readings = parser.parse()
+    val readings = parser.parseRecords()
+
+    println(s"got ${readings.size} sensor records")
+    readings.foreach(println)
+  }
+
+  "a SentinelParser" should "parse known smoke sensor records" in {
+    val input = FileUtils.fileContentsAsString(baseResourceFile("sentinel-smoke-records.json")).get
+    println(s"--- parsing:\n$input")
+
+    val parser = new SentinelParser()
+    parser.initialize(input.getBytes)
+    val readings = parser.parseRecords()
+
+    println(s"got ${readings.size} sensor records")
+    readings.foreach(println)
+  }
+
+  "a SentinelParser" should "parse known image sensor records" in {
+    val input = FileUtils.fileContentsAsString(baseResourceFile("sentinel-image-records.json")).get
+    println(s"--- parsing:\n$input")
+
+    val parser = new SentinelParser()
+    parser.initialize(input.getBytes)
+    val readings = parser.parseRecords()
 
     println(s"got ${readings.size} sensor records")
     readings.foreach(println)

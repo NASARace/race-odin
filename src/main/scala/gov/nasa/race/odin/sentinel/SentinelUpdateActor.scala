@@ -48,9 +48,9 @@ class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with
 
   val sentinelDir = config.getString("sentinel-dir")
   val storeSentinels = config.getBooleanOrElse("store-sentinels", false)
-
-  var sentinels: Map[String,Sentinel] = Map.empty
   val updatedSentinelIds: mutable.Set[String] = mutable.Set.empty
+
+  var sentinels: Map[String,Sentinel] = Map.empty // this is our updated data base with all sentinel states
 
   def sentinelStore: File = new File(sentinelDir, "sentinels.json")
 
@@ -79,16 +79,16 @@ class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with
   }
 
   override def handleMessage: Receive = {
-    case BusEvent (_,ssr: SentinelUpdates,_) => processSensorReadings(ssr)
+    case BusEvent (_,ssrs: SentinelUpdates,_) => processSensorReadings(ssrs)
   }
 
-  def processSensorReadings(ssr: SentinelUpdates): Unit = {
+  def processSensorReadings(ssrs: SentinelUpdates): Unit = {
     updatedSentinelIds.clear()
-    ssr.readings.foreach(update)
+    ssrs.readings.foreach(update)
 
     //updatedSentinels.foreach(publish)
     publish( SentinelSet(sentinels))
-    publish( ssr) // we re-publish on our output channel so that subscribers always get the complete map before the changes
+    publish( ssrs) // we re-publish on our output channel so that subscribers always get the complete map before the changes
   }
 
   def update (sensorReading: SentinelSensorReading): Unit = {
@@ -121,7 +121,7 @@ class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with
     FileUtils.fileContentsAsBytes(file) match {
       case Some(data) =>
         if (parser.initialize(data)){
-          sentinels = parser.parse().foldLeft( Map.empty[String,Sentinel]) { (acc, r) =>
+          sentinels = parser.parseRecords().foldLeft( Map.empty[String,Sentinel]) { (acc, r) =>
             val deviceId = r.deviceId
             val s = acc.getOrElse(deviceId, new Sentinel(deviceId)).updateWith(r)
             acc + (deviceId -> s)
