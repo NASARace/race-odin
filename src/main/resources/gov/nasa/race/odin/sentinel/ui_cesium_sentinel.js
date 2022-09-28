@@ -145,10 +145,10 @@ function toggleShowDetails(event) {
 function initSentinelImagesView() {
     let view = ui.getList("sentinel.image.list");
     if (view) {
-        ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "show", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.window, toggleShowImage, null) },
-            { name: "sensor", width: "2rem", attrs: [], map: e => e.sensorNo },
-            { name: "type", width: "2rem", attrs: [], map: e => e.isInfrared ? "ir" : "v" },
+        ui.setListItemDisplayColumns(view, ["fit", "header"], [
+            { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.window, toggleShowImage, null) },
+            { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
+            { name: "type", width: "2rem", attrs: [], map: e => e.isInfrared ? "ir" : "vis" },
             { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
         ]);
     }
