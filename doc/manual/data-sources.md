@@ -16,9 +16,7 @@ for known fires.
 ### GOES Satellites
 The [Geostationary Operational Environmental Satellites, R-Series](https://www.goes-r.gov) (designated GOES-x after launch) provide continuous weather imagery and monitoring of meteorological and space environment data across North and Central America. There are currently two operational satellites: GOES-16 (east) and GOES-17 (west). GOES-18 is slated to replace GOES-17 in early 2023.
 
-The primary instrument onboard of these satellites is the [Advanced Baseline Imager (ABI)](http:https://www.goes-r.gov/spacesegment/abi.html). A collection of visual images created by ABI can be found [here](https://www.star.nesdis.noaa.gov/GOES/sector.php?sat=G17&sector=wus).
-
-https://www.goes-r.gov/downloads/resources/documents/Beginners_Guide_to_GOES-R_Series_Data.pdf
+The primary instrument onboard of these satellites is the [Advanced Baseline Imager (ABI)](http:https://www.goes-r.gov/spacesegment/abi.html). A collection of visual images created by ABI can be found [here](https://www.star.nesdis.noaa.gov/GOES/sector.php?sat=G17&sector=wus). The [Beginner's Guide to GOES-R Data](https://www.goes-r.gov/downloads/resources/documents/Beginners_Guide_to_GOES-R_Series_Data.pdf) is a general introduction.
 
 The most relevant fire-related data product created with ABI is the short-wave infrared based **Fire / Hot Spot Characterization** for which more information is available in the following documents:
 
@@ -133,10 +131,7 @@ Automated access to LANDFIRE data is available through [WMS](https://www.ogc.org
 
 Available layers include:
 
-  * vegetation
-    + existing vegetation cover
-    + existing vegetation height
-    + existing vegetation type
+  * vegetation cover, height and type
   * fuels
     + surface and canopy
        - fire behavior fuel models
