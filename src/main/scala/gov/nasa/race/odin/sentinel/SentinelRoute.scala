@@ -22,15 +22,16 @@ import akka.http.scaladsl.model.{HttpEntity, StatusCodes, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
+import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.BusEvent
-import gov.nasa.race.http.{CachedFileAssetMap, HttpServer, PushWSRaceRoute, ResponseData, WSContext}
+import gov.nasa.race.core.{BusEvent, ParentActor}
+import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute, HttpServer, PushWSRaceRoute, ResponseData, WSContext}
 import gov.nasa.race.cesium.CesiumRoute
 import gov.nasa.race.ifSome
 import gov.nasa.race.odin.sentinel.SentinelSensorReading.IMAGE_PREFIX
-import gov.nasa.race.ui.{extModule, uiButton, uiField, uiFieldGroup, uiIcon, uiList, uiNumField, uiPanel, uiRowContainer, uiWindow}
+import gov.nasa.race.ui.{extModule, uiButton, uiField, uiFieldGroup, uiIcon, uiList, uiNumField, uiPanel, uiRowContainer, uiTab, uiTabbedContainer, uiWindow}
 import gov.nasa.race.util.FileUtils
 import scalatags.Text
 
@@ -62,8 +63,8 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
 
   val sentinelDir = config.getString("sentinel.dir")
   val imageDir = FileUtils.ensureWritableDir(config.getStringOrElse("sentinel.image-dir", s"tmp/delphire/$IMAGE_PREFIX")).get
-  val sentinelAssets = getSymbolicAssetMap("sentinel.assets", config, 
-                                           Seq(("sentinel","sentinel-sym.png"), ("fire","fire.png")))
+  val sentinelAssets = getSymbolicAssetMap("sentinel.assets", config,
+    Seq(("sentinel","sentinel-sym.png"), ("fire","fire.png"), ("smoke", "smoke.png"), ("fire-smoke", "fire-smoke.png")))
   
 
   def getSentinelAssetContent (key: String): Option[HttpEntity.Strict] = {
@@ -109,14 +110,23 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
 
     val labelOffsetX = cfg.getIntOrElse("label-offset.x", 8)
     val labelOffsetY = cfg.getIntOrElse("label-offset.y", 0)
+    val pointDist = cfg.getIntOrElse("point-dist", 120000)
 
     s"""export const sentinel = {
   ${cesiumLayerConfig(cfg, "/fire/detection/Sentinel", "stationary Sentinel fire sensors")},
   color: Cesium.Color.fromCssColorString('${cfg.getStringOrElse("color", "chartreuse")}'),
   alertColor: Cesium.Color.fromCssColorString('${cfg.getStringOrElse("alert-color", "deeppink")}'),
+  labelFont: '${cfg.getStringOrElse("label-font", "16px sans-serif")}',
+  labelBackground: ${cesiumColor(cfg, "label-bg", "black")},
   labelOffset: new Cesium.Cartesian2( $labelOffsetX, $labelOffsetY),
-  billboardDC: new Cesium.DistanceDisplayCondition( 0, 200000),
+  labelDC: new Cesium.DistanceDisplayCondition( 0, ${cfg.getIntOrElse("label-dist", 200000)}),
+  pointSize: ${cfg.getIntOrElse("point-size", 5)},
+  pointOutlineColor: ${cesiumColor(cfg,"point-outline-color", "black")},
+  pointOutlineWidth: ${cfg.getIntOrElse("point-outline-width", 1)},
+  pointDC: new Cesium.DistanceDisplayCondition( $pointDist, Number.MAX_VALUE),
+  billboardDC: new Cesium.DistanceDisplayCondition( 0, $pointDist),
   imageWidth: ${cfg.getIntOrElse("img-width", 400)},
+  maxHistory: ${cfg.getIntOrElse("max-history", 10)}
 };"""
     //... and more to follow
   }
@@ -124,22 +134,35 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
   //--- document content
 
   def uiSentinelWindow(title: String="Sentinels"): Text.TypedTag[String] = {
+    val maxDataRows = 8
+
     uiWindow(title, "sentinel", "sentinel-icon.svg")(
       cesiumLayerPanel("sentinel", "main.toggleShowSentinel(event)"),
       uiList("sentinel.list", 10, "main.selectSentinel(event)"),
       uiPanel("data", false)(
-        uiFieldGroup(labelWidth="5rem", width="18rem") (
-          uiField("fire", "sentinel.data.fire", isFixed = true),
-          uiField("smoke", "sentinel.data.smoke", isFixed = true),
-          uiField("wind", "sentinel.data.anemo", isFixed = true),
-          uiField("gas", "sentinel.data.gas", isFixed = true),
-          uiField("thermo", "sentinel.data.thermo", isFixed = true),
-          uiField("voc", "sentinel.data.voc", isFixed = true)
+        uiTabbedContainer()(
+          uiTab("fire", false)(uiList("sentinel.fire.list", maxDataRows)),
+          uiTab("smoke", false)(uiList("sentinel.smoke.list", maxDataRows)),
+          uiTab("imgs", true)(uiList("sentinel.image.list", maxDataRows, "main.selectImage(event)")),
+          uiTab("gas", false)(uiList("sentinel.gas.list", maxDataRows)),
+          uiTab("temp", false)(uiList("sentinel.thermo.list", maxDataRows)),
+          uiTab("wind", false)(uiList("sentinel.anemo.list", maxDataRows)),
+          uiTab("voc", false)(uiList("sentinel.voc.list", maxDataRows)),
+          uiTab("accel", false)(uiList("sentinel.accel.list", maxDataRows)),
+          uiTab("gps",false)(uiList("sentinel.gps.list", maxDataRows))
         )
-      ),
-      uiPanel("images", false)(
-        uiList("sentinel.image.list", 6, "main.selectImage(event)"),
       )
+      /*
+      uiPanel("fire", false)(uiList("sentinel.fire.list", maxDataRows)),
+      uiPanel("smoke", false)(uiList("sentinel.smoke.list", maxDataRows)),
+      uiPanel("camera", false)(uiList("sentinel.image.list", maxDataRows, "main.selectImage(event)")),
+      uiPanel("gas", false)(uiList("sentinel.gas.list", maxDataRows)),
+      uiPanel("thermometer", false)(uiList("sentinel.thermo.list", maxDataRows)),
+      uiPanel("anemometer", false)(uiList("sentinel.anemo.list", maxDataRows)),
+      uiPanel("volatile organic compounds", false)(uiList("sentinel.voc.list", maxDataRows)),
+      uiPanel("accelerometer", false)(uiList("sentinel.accel.list", maxDataRows)),
+      uiPanel("gps",false)(uiList("sentinel.gps.list", maxDataRows))
+       */
     )
   }
 
@@ -195,3 +218,8 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
     }
   }
 }
+
+/**
+ * simple service to show live Sentinel data
+ */
+class SentinelApp (val parent: ParentActor, val config: Config) extends DocumentRoute with SentinelRoute

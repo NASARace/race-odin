@@ -32,6 +32,7 @@ object SentinelSensorReading {
   val READING = asc("sentinelReading")
   val UPDATES = asc("sentinelUpdates")
   val DEVICE_ID = asc("deviceId")
+  val DEVICE_NAME = asc("deviceName")
   val RECORD_ID = asc("recordId")
   val ID = asc("id") // TODO - this should be recordId
   val SENSOR_NO = asc("sensorNo")
@@ -47,11 +48,9 @@ object SentinelSensorReading {
   val ANEMO = asc("anemometer"); val ANGLE = asc("angle"); val SPD = asc("speed")
   val FIRE = asc("fire"); val PROB = asc("fireProb")
   val IMAGE = asc("image"); val FILENAME = asc("filename"); val IS_INFRARED = asc("isInfrared"); val CONF_NO = asc("confNo")
+  val SMOKE = asc("smoke"); val SMOKE_PROB = asc("smokeProb")
 
   val IMAGE_PREFIX = "image"
-
-  //--- new records
-  val SMOKE = asc("smoke"); val SMOKE_PROB = asc("smokeProb")
 }
 import SentinelSensorReading._
 
@@ -74,9 +73,11 @@ trait SentinelSensorReading extends Dated with JsonSerializable {
   def serializeDataTo (w: JsonWriter): Unit
 
   def serializeReading (w: JsonWriter): Unit = {
-    w.writeDateTimeMember(TIME_RECORDED, date)
-    w.writeIntMember(SENSOR_NO,sensorNo)
-    serializeDataTo(w)
+    w.writeStringMember(ID,recordId)
+      .writeStringMember(DEVICE_ID, deviceId)
+      .writeIntMember(SENSOR_NO,sensorNo)
+      .writeDateTimeMember(TIME_RECORDED, date)
+      .writeObjectMember(readingType){ serializeDataTo }
   }
 
   def serializeAsMemberTo (w: JsonWriter): Unit = w.writeObjectMember(readingType){ serializeReading }
@@ -89,16 +90,8 @@ trait SentinelSensorReading extends Dated with JsonSerializable {
     serializeDataTo(w)
   }
 
-  def serializeReadingTo (w: JsonWriter): Unit = {
-    w.writeObject { _
-      .writeObjectMember(READING) { _
-        .writeStringMember(ID,recordId)
-        .writeStringMember(DEVICE_ID, deviceId)
-        .writeIntMember(SENSOR_NO,sensorNo)
-        .writeDateTimeMember(TIME_RECORDED, date)
-        .writeObjectMember(readingType){ serializeDataTo }
-      }
-    }
+  def serializeReadingMessageTo(w: JsonWriter): Unit = {
+    w.writeObject( _.writeObjectMember(READING)(serializeReading))
   }
 
   def copyWithDate(newDate: DateTime): SentinelSensorReading
@@ -110,7 +103,7 @@ trait SentinelSensorReading extends Dated with JsonSerializable {
 case class SentinelUpdates (readings: Seq[SentinelSensorReading]) extends JsonSerializable {
   def serializeMembersTo (w: JsonWriter): Unit = {
     w.writeArrayMember(UPDATES){ w=>
-      readings.foreach( r=> r.serializeReadingTo(w))
+      readings.foreach( r=> r.serializeReadingMessageTo(w))
     }
   }
 }

@@ -44,12 +44,7 @@ object Sentinel {
   val JOINED = asc("joined")
   val NEW_RECORD = asc("NewRecord")
 
-  def writeReadingMemberTo (w: JsonWriter, name: CharSequence, date: DateTime)(f: JsonWriter=>Unit): Unit = {
-    w.writeObjectMember(name) { w =>
-      w.writeDateTimeMember(TIME_RECORDED,date)
-      f(w)
-    }
-  }
+  val MaxReadings = 10  // TODO - do we need per-sensor type limits and should it be configurable?
 }
 import Sentinel._
 
@@ -59,61 +54,70 @@ import Sentinel._
   */
 case class Sentinel (
                       id: String, // deviceId
+                      name: String,
                       date: DateTime = DateTime.UndefinedDateTime, // last sensor update
-                      gps: Option[SentinelGpsReading] = None,
-                      gyro: Option[SentinelGyroReading] = None,
-                      mag: Option[SentinelMagReading] = None,
-                      accel: Option[SentinelAccelReading] = None,
-                      gas: Option[SentinelGasReading] = None,
-                      thermo: Option[SentinelThermoReading] = None,
-                      voc: Option[SentinelVocReading] = None,
-                      anemo: Option[SentinelAnemoReading] = None,
-                      fire: Option[SentinelFireReading] = None,
-                      smoke: Option[SentinelSmokeReading] = None,
-                      images: Seq[SentinelImageReading] = Seq.empty
+                      gps:    Seq[SentinelGpsReading]    = Seq.empty,
+                      gyro:   Seq[SentinelGyroReading]   = Seq.empty,
+                      mag:    Seq[SentinelMagReading]    = Seq.empty,
+                      accel:  Seq[SentinelAccelReading]  = Seq.empty,
+                      gas:    Seq[SentinelGasReading]    = Seq.empty,
+                      thermo: Seq[SentinelThermoReading] = Seq.empty,
+                      voc:    Seq[SentinelVocReading]    = Seq.empty,
+                      anemo:  Seq[SentinelAnemoReading]  = Seq.empty,
+                      fire:   Seq[SentinelFireReading]   = Seq.empty,
+                      smoke:  Seq[SentinelSmokeReading]  = Seq.empty,
+                      images: Seq[SentinelImageReading]  = Seq.empty
                ) extends Dated with JsonSerializable {
 
   def serializeMembersTo (w: JsonWriter): Unit = {
     w.writeStringMember(DEVICE_ID, id)
+    w.writeStringMember(DEVICE_NAME, name)
     w.writeDateTimeMember(TIME_RECORDED,date)
 
-    ifSome(gps){ _.serializeAsMemberTo(w) }
-    ifSome(gyro){ _.serializeAsMemberTo(w) }
-    ifSome(mag){ _.serializeAsMemberTo(w) }
-    ifSome(accel){ _.serializeAsMemberTo(w) }
-    ifSome(gas){ _.serializeAsMemberTo(w) }
-    ifSome(thermo){ _.serializeAsMemberTo(w) }
-    ifSome(voc){ _.serializeAsMemberTo(w) }
-    ifSome(anemo){ _.serializeAsMemberTo(w) }
-    ifSome(fire){ _.serializeAsMemberTo(w) }
-    ifSome(smoke){ _.serializeAsMemberTo(w) }
+    serializeReadings(w, gps)
+    serializeReadings(w, gyro)
+    serializeReadings(w, mag)
+    serializeReadings(w, accel)
+    serializeReadings(w, gas)
+    serializeReadings(w, thermo)
+    serializeReadings(w, voc)
+    serializeReadings(w, anemo)
+    serializeReadings(w, fire)
+    serializeReadings(w, smoke)
+    serializeReadings(w, images)
+  }
 
-    if (images.nonEmpty) {
-      w.writeArrayMember(IMAGES) { w=> images.foreach( _.serializeAsElementTo(w)) }
+  def serializeReadings(w: JsonWriter, rs: Seq[SentinelSensorReading]): Unit = {
+    if (rs.nonEmpty) {
+      val k = rs.head.readingType
+      w.writeArrayMember(k) { w=> rs.foreach( _.serializeAsElementTo(w))}
     }
   }
 
   def updateWith (update: SentinelSensorReading): Sentinel = {
+    implicit val maxReadings = MaxReadings
+
     if (update.deviceId != id) return this  // not for us
 
     update match {
-      case r: SentinelGpsReading => copy(date=r.date, gps=Some(r))
-      case r: SentinelGyroReading => copy(date=r.date, gyro=Some(r))
-      case r: SentinelMagReading => copy(date=r.date, mag=Some(r))
-      case r: SentinelAccelReading => copy(date=r.date, accel=Some(r))
-      case r: SentinelGasReading => copy(date=r.date, gas=Some(r))
-      case r: SentinelThermoReading => copy(date=r.date, thermo=Some(r))
-      case r: SentinelVocReading => copy(date=r.date, voc=Some(r))
-      case r: SentinelAnemoReading => copy(date=r.date, anemo=Some(r))
-      case r: SentinelFireReading => copy(date=r.date, fire=Some(r))
-      case r: SentinelSmokeReading => copy(date=r.date, smoke=Some(r))
-      case r: SentinelImageReading => copy(date=r.date, images=addImage(r))
+      case r: SentinelGpsReading =>    copy( date= r.date, gps=     addReading(r, gps))
+      case r: SentinelGyroReading =>   copy( date= r.date, gyro=    addReading(r, gyro))
+      case r: SentinelMagReading =>    copy( date= r.date, mag=     addReading(r, mag))
+      case r: SentinelAccelReading =>  copy( date= r.date, accel=   addReading(r, accel))
+      case r: SentinelGasReading =>    copy( date= r.date, gas=     addReading(r, gas))
+      case r: SentinelThermoReading => copy( date= r.date, thermo=  addReading(r, thermo))
+      case r: SentinelVocReading =>    copy( date= r.date, voc=     addReading(r, voc))
+      case r: SentinelAnemoReading =>  copy( date= r.date, anemo=   addReading(r, anemo))
+      case r: SentinelFireReading =>   copy( date= r.date, fire=    addReading(r, fire))
+      case r: SentinelSmokeReading =>  copy( date= r.date, smoke=   addReading(r, smoke))
+      case r: SentinelImageReading =>  copy( date= r.date, images=  addReading(r, images))
     }
   }
 
-  def addImage (r: SentinelImageReading): Seq[SentinelImageReading] = {
-    // TODO - we probably want to cap the list size
-    r +: images
+  def addReading[T <: SentinelSensorReading](r: T, rs: Seq[T]) (implicit maxReadings: Int): Seq[T] = {
+    var newRs = rs
+    if (rs.size >= maxReadings) newRs = rs.dropRight(1)
+    r +: newRs
   }
 }
 

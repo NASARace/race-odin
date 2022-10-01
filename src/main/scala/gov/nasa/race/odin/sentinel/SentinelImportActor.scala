@@ -17,22 +17,22 @@
 package gov.nasa.race.odin.sentinel
 
 import akka.actor.ActorRef
-import akka.http.scaladsl.model.HttpHeader
+import akka.http.scaladsl.model.{HttpEntity, HttpHeader}
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
-import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
-import akka.stream.Materializer
+import akka.http.scaladsl.model.ws.Message
+import akka.stream.BufferOverflowException
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor}
-import gov.nasa.race.http.{HttpActor, SyncWSAdapterActor, WSAdapterActor}
+import gov.nasa.race.http.{HttpActor, SyncWSAdapterActor}
 import gov.nasa.race.ifInstanceOf
 import gov.nasa.race.odin.sentinel.SentinelSensorReading.IMAGE_PREFIX
 import gov.nasa.race.util.FileUtils
 
 import java.io.File
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.util.{Success, Failure => FailureEx}
+import scala.util.{Success, Try, Failure => FailureEx}
 
 /**
  * actor for realtime import of Sentinel sensor data from Delphire servers
@@ -195,7 +195,7 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
   }
 
   def requestRecords (deviceId: String, sensorNo: Int, sensorCapability: String, url: String): Unit = {
-    httpRequestStrict(url,headers = requestHdrs) {
+    httpRequestStrictWithRetry(url, headers = requestHdrs, retries=maxRetry) {
       case Success(strictEntity) => self ! RecordResponse(deviceId, sensorNo, sensorCapability, strictEntity.getData().toArray)
       case FailureEx(x) => error(s"failed to obtain initial records: $x")
     }
@@ -224,7 +224,7 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
 
   def requestImage (imgRec: SentinelImageReading): Unit = {
     val url = s"$baseUrl/images/${imgRec.recordId}"
-    httpRequestStrict(url,headers = requestHdrs) {
+    httpRequestStrictWithRetry(url,headers = requestHdrs, retries=maxRetry) {
       case Success(strictEntity) =>
         val file = new File(imageDir,imgRec.fileName)
 

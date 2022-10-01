@@ -46,6 +46,7 @@ case class SentinelSet (sentinels: Map[String,Sentinel]) extends JsonSerializabl
  */
 class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
 
+  val sentinelNames: Map[String,String] = Map.from(config.getKeyValuePairsOrElse("sentinel-names", Seq.empty))
   val sentinelDir = config.getString("sentinel-dir")
   val storeSentinels = config.getBooleanOrElse("store-sentinels", false)
   val updatedSentinelIds: mutable.Set[String] = mutable.Set.empty
@@ -93,9 +94,16 @@ class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with
 
   def update (sensorReading: SentinelSensorReading): Unit = {
     val deviceId = sensorReading.deviceId
-    val updatedSentinel = sentinels.getOrElse(deviceId, new Sentinel(deviceId)).updateWith(sensorReading)
+    val updatedSentinel = sentinels.getOrElse(deviceId, new Sentinel(deviceId, deviceName(deviceId))).updateWith(sensorReading)
     sentinels = sentinels + (deviceId -> updatedSentinel)
     updatedSentinelIds.add(deviceId)
+  }
+
+  def deviceName (deviceId: String): String = {
+    sentinelNames.get(deviceId) match {
+      case Some(deviceName) => deviceName
+      case None => if (deviceId.length < 7) deviceId else deviceId.substring(0,6) + '…'
+    }
   }
 
   def saveSentinels (file: File): Unit = {
@@ -123,7 +131,7 @@ class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with
         if (parser.initialize(data)){
           sentinels = parser.parseRecords().foldLeft( Map.empty[String,Sentinel]) { (acc, r) =>
             val deviceId = r.deviceId
-            val s = acc.getOrElse(deviceId, new Sentinel(deviceId)).updateWith(r)
+            val s = acc.getOrElse(deviceId, new Sentinel(deviceId, deviceName(deviceId))).updateWith(r)
             acc + (deviceId -> s)
           }
         }
