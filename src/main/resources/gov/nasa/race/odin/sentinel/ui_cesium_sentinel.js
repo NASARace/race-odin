@@ -97,12 +97,13 @@ class SentinelEntry {
 
     fireStatus() {
         let fire = this.sentinel.fire;
-        return (fire && fire.length > 0) ? util.f_1.format(fire[0].fire.fireProb) : "-";
+        //return (fire && fire.length > 0) ? util.f_1.format(fire[0].fire.fireProb) : "-";
+        return (fire && fire.length > 0) ? Math.abs(fire[0].fire.fireProb.toFixed(2)) : "-";
     }
 
     smokeStatus() {
         let smoke = this.sentinel.smoke;
-        return (smoke && smoke.length > 0) ? util.f_1.format(smoke[0].smoke.smokeProb) : "-";
+        return (smoke && smoke.length > 0) ? Math.abs(smoke[0].smoke.smokeProb.toFixed(2)) : "-";
     }
 
     imageStatus() {

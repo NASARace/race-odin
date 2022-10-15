@@ -26,10 +26,12 @@ lazy val root = (project in file(".")).
       "gov.nasa.race" %% "race-client-ui" % raceVersion,
       "gov.nasa.race" %% "race-cesium" % raceVersion,
       "gov.nasa.race" %% "race-net-http" % raceVersion,
+      "gov.nasa.race" %% "race-net-smtp" % raceVersion,
       "gov.nasa.race" %% "race-tools" % raceVersion excludeAll(
         ExclusionRule(organization="ch.qos.logback")
       ),
-      "gov.nasa.race" %% "race-testkit" % raceVersion % Test
+      "gov.nasa.race" %% "race-testkit" % raceVersion % Test,
+
     ),
     resolvers += "unidata" at "https://artifacts.unidata.ucar.edu/repository/unidata-all/"
   )

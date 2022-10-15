@@ -92,8 +92,8 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
           }
         }
       } ~
-      fileAsset("ui_cesium_sentinel.js") ~
-      fileAsset("sentinel-icon.svg")
+      fileAssetPath("ui_cesium_sentinel.js") ~
+      fileAssetPath("sentinel-icon.svg")
     }
   }
 

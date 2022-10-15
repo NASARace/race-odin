@@ -185,7 +185,7 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
   }
 
   def requestInitialRecords (deviceId: String, sensorNo: Int, sensorCapability: String): Unit = {
-    val url = s"$baseUrl/devices/$deviceId/sensors/$sensorNo/$sensorCapability?sort=timeRecorded,ASC&limit=$maxHistory"
+    val url = s"$baseUrl/devices/$deviceId/sensors/$sensorNo/$sensorCapability?sort=timeRecorded,DESC&limit=$maxHistory"
     requestRecords(deviceId, sensorNo, sensorCapability, url)
   }
 
