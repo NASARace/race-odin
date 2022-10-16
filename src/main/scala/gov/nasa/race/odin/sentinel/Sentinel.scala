@@ -117,7 +117,9 @@ case class Sentinel (
   def addReading[T <: SentinelSensorReading](r: T, rs: Seq[T]) (implicit maxReadings: Int): Seq[T] = {
     var newRs = rs
     if (rs.size >= maxReadings) newRs = rs.dropRight(1)
-    r +: newRs
+    newRs = r +: newRs
+
+    newRs.sortWith( (a,b) => a.date > b.date)  // should we only sort initially for caps with multiple sensors (e.g. images)?
   }
 }
 

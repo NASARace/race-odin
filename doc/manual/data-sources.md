@@ -186,6 +186,9 @@ Each of the above topics is available in CSV, KML, shapefile and GeoJSON format.
 ### OSM Buildings
 The [OSM Buildings](https://osmbuildings.org/) database provides shapes and meta information of buildings in form of GeoJSON. The [Overpass API](https://dev.overpass-api.de/overpass-doc/en/index.html) (http POST with query as form data) can be used to filter regions and objects of interest.
 
+### Microsoft USBuildingFootprints
+The [Microsoft US buildings footprint](https://github.com/microsoft/USBuildingFootprints) Github repository contains a large number of buildings scanned from Bing imagery. Stated intention is to integrate this database into OSM Buildings but as of late 2022 the repository has not been fully merged and contains a superset of OSM Buildings. 
+
 ------------------------------------------------------------------------------------------------------------------
 
 ## Object Tracking

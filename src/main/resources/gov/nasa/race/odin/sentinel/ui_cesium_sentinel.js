@@ -211,7 +211,7 @@ function initListView (id, colSpecs) {
 function initSentinelFireView() {
     return initListView( "sentinel.fire.list", [
         { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.fire.fireProb) },
+        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => Math.abs(e.fire.fireProb).toFixed(2) },
         ui.listItemSpacerColumn(),
         { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
     ]);
@@ -219,7 +219,7 @@ function initSentinelFireView() {
 function initSentinelSmokeView() {
     return initListView( "sentinel.smoke.list", [
         { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.smoke.smokeProb) },
+        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => Math.abs(e.smoke.smokeProb).toFixed(2) },
         ui.listItemSpacerColumn(),
         { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
     ]);
@@ -385,7 +385,6 @@ function updateSentinelReadings (sentinelEntry, memberName, newReading, view) {
     let readings = sentinel[memberName];
 
     sentinel.timeRecorded = newReading.timeRecorded;
-    ui.updateListItem(sentinelView, sentinelEntry);
 
     if (readings) {
         if (readings.length >= maxHistory) {
@@ -394,12 +393,14 @@ function updateSentinelReadings (sentinelEntry, memberName, newReading, view) {
         } else {
             readings.unshift(newReading);
         }
+        readings.sort( (a,b) => b.timeRecorded - a.timeRecorded); // in case records come out of order
     } else {
         readings = [newReading];
         sentinel[memberName] = readings;
     }
 
     if (sentinelEntry == selectedSentinelEntry)  ui.setListItems(view, readings);
+    ui.updateListItem(sentinelView, sentinelEntry);
 }
 
 function checkFireAsset(e) {

@@ -17,27 +17,27 @@
 package gov.nasa.race.odin.sentinel
 
 import akka.actor.ActorRef
-import akka.http.scaladsl.model.{HttpEntity, HttpHeader}
+import akka.http.scaladsl.model.HttpHeader
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model.ws.Message
-import akka.stream.BufferOverflowException
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor}
 import gov.nasa.race.http.{HttpActor, SyncWSAdapterActor}
 import gov.nasa.race.ifInstanceOf
 import gov.nasa.race.odin.sentinel.SentinelSensorReading.IMAGE_PREFIX
+import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
 
 import java.io.File
 import scala.collection.mutable
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.util.{Success, Try, Failure => FailureEx}
+import scala.util.{Success, Failure => FailureEx}
 
 /**
  * actor for realtime import of Sentinel sensor data from Delphire servers
  */
-class SentinelImportActor (val config: Config) extends PublishingRaceActor with HttpActor with SyncWSAdapterActor with PeriodicRaceActor {
+class SentinelImportActor (val config: Config) extends PublishingRaceActor with HttpActor with SyncWSAdapterActor with PeriodicRaceActor  {
 
   // not thread-safe, access only from actor thread
   class DeviceEntry (val deviceInfo: SentinelDeviceInfo) {
@@ -129,6 +129,9 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
     case rsp: RecordResponse => processRecords(rsp)
 
     //case rn: RecordNotification => handleSentinelRecordNotification(rn.data)
+
+    //--- simulation & debugging
+    case "simulateFire" => simulateFire()
   }
 
   def requestDevices(): Unit = {
@@ -248,5 +251,28 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
         }
       }
     }
+  }
+
+  //--- simulation & debugging
+
+  def simulateFire(): Unit = {
+    if (devices.nonEmpty) {
+      devices.foreach { e=>
+        val (deviceId,de) = e
+        info(s"polling sensors of device: $deviceId")
+        de.sensors.foreach { e=>
+          val (sensorNo,si) = e
+          si.capabilities.foreach { e=>
+            val sensorCap = e._1
+            if (sensorCap == "fire") {
+              val fireReading = SentinelFireReading(deviceId,sensorNo.toInt,"42", DateTime.now, 0.942)
+              publish( new SentinelUpdates( Seq(fireReading)))
+              return
+            }
+          }
+        }
+      }
+    }
+    warning(s"cannot simulate fire - no suitable device found")
   }
 }

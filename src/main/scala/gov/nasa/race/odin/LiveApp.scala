@@ -28,8 +28,9 @@ import gov.nasa.race.ui.UiSettingsRoute
  */
 class LiveApp (val parent: ParentActor, val config: Config) extends DocumentRoute
   with UiSettingsRoute
-  with SentinelRoute
+  with GeoLayerRoute
   with CesiumTrackRoute
   with CesiumGoesrRoute
   with CesiumJpssRoute
-  with GeoLayerRoute
+  with SentinelRoute
+
