@@ -78,17 +78,21 @@ class SentinelEntry {
         this.assets = null;
     }
 
-    alertStatus() {
+    hasFire() {
         let fire = this.sentinel.fire;
+        return (fire && fire.length > 0 && fire[0].fire.fireProb > 0.5);
+    }
+
+    hasSmoke() {
         let smoke = this.sentinel.smoke;
+        (smoke && smoke.length > 0 && smoke[0].smoke.smokeProb > 0.5);
+    }
 
-        let hasFire = (fire && fire.length > 0 && fire[0].fire.fireProb > 0.5);
-        let hasSmoke = (smoke && smoke.length > 0 && smoke[0].smoke.smokeProb > 0.5);
-
-        if (hasFire){
-            if (hasSmoke) return ui.createImage("sentinel-asset/fire-smoke");
+    alertStatus() {
+        if (this.hasFire()){
+            if (this.hasSmoke()) return ui.createImage("sentinel-asset/fire-smoke");
             else return  ui.createImage("sentinel-asset/fire");
-        } else if (hasSmoke) {
+        } else if (this.hasSmoke()) {
             return ui.createImage("sentinel-asset/smoke");
         } else {
             return "";
@@ -98,12 +102,12 @@ class SentinelEntry {
     fireStatus() {
         let fire = this.sentinel.fire;
         //return (fire && fire.length > 0) ? util.f_1.format(fire[0].fire.fireProb) : "-";
-        return (fire && fire.length > 0) ? Math.abs(fire[0].fire.fireProb.toFixed(2)) : "-";
+        return (fire && fire.length > 0) ? fire[0].fire.fireProb.toFixed(2) : "-";
     }
 
     smokeStatus() {
         let smoke = this.sentinel.smoke;
-        return (smoke && smoke.length > 0) ? Math.abs(smoke[0].smoke.smokeProb.toFixed(2)) : "-";
+        return (smoke && smoke.length > 0) ? smoke[0].smoke.smokeProb.toFixed(2) : "-";
     }
 
     imageStatus() {
@@ -211,7 +215,7 @@ function initListView (id, colSpecs) {
 function initSentinelFireView() {
     return initListView( "sentinel.fire.list", [
         { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => Math.abs(e.fire.fireProb).toFixed(2) },
+        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => e.fire.fireProb.toFixed(2) },
         ui.listItemSpacerColumn(),
         { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
     ]);
@@ -219,7 +223,7 @@ function initSentinelFireView() {
 function initSentinelSmokeView() {
     return initListView( "sentinel.smoke.list", [
         { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => Math.abs(e.smoke.smokeProb).toFixed(2) },
+        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => e.smoke.smokeProb.toFixed(2) },
         ui.listItemSpacerColumn(),
         { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
     ]);
@@ -404,18 +408,19 @@ function updateSentinelReadings (sentinelEntry, memberName, newReading, view) {
 }
 
 function checkFireAsset(e) {
-    let sentinel = e.sentinel;
-
-    if (sentinel.fire && sentinel.fire.fireProb > 0.5) {
+    if (e.hasFire() || e.hasSmoke()) {
         if (e.assets) {
             e.assets.symbol.billboard.color = config.sentinel.alertColor;
 
+            /*
             if (!e.assets.fire) {
                 e.assets.fire = createFireAsset(e);
                 if (e.assets.fire) e.assets.fire.show = true;
             } else {
                 // update fire location/probability
             }
+            */
+            uiCesium.requestRender();
         }
     }
 }

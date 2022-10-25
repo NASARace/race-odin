@@ -23,7 +23,7 @@ import akka.http.scaladsl.model.ws.Message
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor}
-import gov.nasa.race.http.{HttpActor, SyncWSAdapterActor}
+import gov.nasa.race.http.{HttpActor, SyncWSAdapterActor, WsConnectRequest}
 import gov.nasa.race.ifInstanceOf
 import gov.nasa.race.odin.sentinel.SentinelSensorReading.IMAGE_PREFIX
 import gov.nasa.race.uom.DateTime
@@ -55,16 +55,23 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
   private val requestHdrs = Seq(Authorization(OAuth2BearerToken(config.getVaultString("delphire.access-token"))))
   private val wsUri = s"ws://$delphireHost"
 
-  // if those are set we are not using websocket notifications. This might result in increased network traffic
-  override val TickIntervalKey = "polling-interval"
-  override def defaultTickInterval: FiniteDuration = 0.seconds // no polling
+  // if those are set we fall back to polling if websocket connection is lost and can't be re-established
+  val usePolling = config.getBooleanOrElse("use-polling", true)
+  override def defaultTickInterval: FiniteDuration = 60.seconds
+
+  // websocket connection parameters
+  val connectTimeout = config.getFiniteDurationOrElse("connect-timeout", 10.seconds)
+  var nFailedConnects = 0 // number of consecutive connection timeouts/failures
+  val maxFailedConnects = config.getIntOrElse("max-failed-connects", 5)
+  val reconnectInterval: FiniteDuration = config.getFiniteDurationOrElse("reconnect-interval", 30.seconds)
 
   val maxHistory = config.getIntOrElse("max-history", 5) // number of recent readings. do we need that per-sensor?
   val imageDir = FileUtils.ensureWritableDir(config.getStringOrElse("image-dir", s"tmp/delphire/$IMAGE_PREFIX")).get
 
   val parser = new SentinelParser
-  val devices: mutable.Map[String,DeviceEntry] = mutable.Map.empty
 
+  val devices: mutable.Map[String,DeviceEntry] = mutable.Map.empty
+  var lastUpdate: DateTime = DateTime.UndefinedDateTime
 
   //--- RaceActor interface
   override def handleMessage: Receive = handleSentinelImportMessage.orElse( handleWsMessage)
@@ -76,39 +83,60 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
     }
   }
 
-  //--- PeriodicRaceActor interface (in case polling-interval is configured)
+  //--- PeriodicRaceActor interface (in case we are either configured or have to fall back to polling)
   override def onRaceTick(): Unit = {
-    pollDevices()
+    if (usePolling) pollDevices()
   }
 
   //--- WsAdapterActor interface
   override def getWsUri = Some(wsUri)
   override def getWebSocketRequestHeaders(): Seq[HttpHeader] = requestHdrs
 
+  override protected def processIncomingMessage (msg: Message): Unit = {
+    withMessageData(msg) { data=>
+      if (data.length > 0) handleSentinelNotification(data)
+    }
+  }
+
+  //--- websocket connection state callbacks
+
   override def onConnect(): Unit = {
     info(s"connected to $wsUri")
     devices.foreach( e=> registerForDeviceUpdates(e._1)) // note we only connect after we already got devices
   }
   override def onConnectFailed (uri: String, cause: String): Unit = {
-    warning(s"connecting to web socket $uri failed with $cause, fall back to polling")
+    warning(s"connecting to web socket $uri failed with $cause")
+    tryReConnect(uri)
   }
   override def onConnectTimeout(uri: String, dur: FiniteDuration): Unit = {
     warning(s"connecting to web socket $uri times out, fall back to polling")
-  }
-  override protected def processIncomingMessage (msg: Message): Unit = {
-    withMessageData(msg) { data=>
-      if (data.length > 0) handleSentinelRecordNotification(data)
-    }
+    tryReConnect(uri)
   }
 
-  override def onDisconnect(): Unit = {
+  override protected def onDisconnect(): Unit = {
     info(s"disconnected from $wsUri")
+    if (!isTerminating) tryReConnect(wsUri)
+  }
+
+  def tryReConnect(uri: String): Unit = {
+    nFailedConnects += 1
+    if (nFailedConnects < maxFailedConnects) {
+      info(s"scheduling reconnect to $uri in $reconnectInterval, remaining attempts: ${maxFailedConnects - nFailedConnects}")
+      scheduleOnce(reconnectInterval, WsConnectRequest(uri,connectTimeout))
+    } else {
+      if (usePolling) {
+        warning(s"max connection attempts to $uri exceeded, falling back to polling")
+        startScheduler
+      } else {
+        warning(s"max connection attempts to $uri exceeded, data acquisition terminated.")
+      }
+    }
   }
 
   //--- actor specifics
 
   // websocket messages
-  def handleSentinelRecordNotification (data: Array[Byte]): Unit = {
+  def handleSentinelNotification(data: Array[Byte]): Unit = {
     if (parser.initialize(data)) {
       parser.parseNotification() match {
         case Some(sn) =>
@@ -132,6 +160,7 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
 
     //--- simulation & debugging
     case "simulateFire" => simulateFire()
+    case "simulateSmoke" => simulateSmoke()
   }
 
   def requestDevices(): Unit = {
@@ -150,7 +179,9 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
           devices += (di.deviceId -> new DeviceEntry(di))
           requestSensors(di.deviceId)
         }
+
         connect() // ready to open websocket
+
       } else warning(s"no devices")
     }
   }
@@ -206,23 +237,29 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
 
   def processRecords(msg: RecordResponse): Unit = {
     if (parser.initialize(msg.data)) {
-      parser.parseRecords().foreach { r =>
-        val recordType = r.readingType
-        var skip = false
-
-        for (de <- devices.get(r.deviceId); si <- de.sensors.get(r.sensorNo)) {
-          si.capabilities.get(recordType) match {
-            case Some(recId) => skip = (recId == r.recordId)
-            case None =>
-          }
-          if (!skip) {
-            si.capabilities += recordType -> r.recordId
-            ifInstanceOf[SentinelImageReading](r)( requestImage)
-            publish( new SentinelUpdates( Seq(r)))
-          }
-        }
-      }
+      val ssrs = parser.parseRecords().filter(updateDevice)
+      if (ssrs.nonEmpty) publish(  SentinelUpdates(ssrs))
     }
+  }
+
+  def updateDevice (r: SentinelSensorReading): Boolean = {
+    val recordType = r.readingType
+    for (di <- devices.get(r.deviceId);
+         si <- di.sensors.get(r.sensorNo);
+         maybeLastRec <- si.capabilities.get(recordType)) {
+      maybeLastRec match {
+        case Some(rLast) =>
+          if (rLast.recordId == r.recordId || rLast.date > r.date) return false  // we already have this or a newer record
+          else si.capabilities += (recordType -> Some(r))
+        case None => si.capabilities += (recordType -> Some(r)) // no record for this sensor capability yet
+      }
+
+      lastUpdate = r.date
+      ifInstanceOf[SentinelImageReading](r)( requestImage)
+      return true
+    }
+
+    false // ignore unknown device of sensor or capability
   }
 
   def requestImage (imgRec: SentinelImageReading): Unit = {
@@ -255,24 +292,39 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
 
   //--- simulation & debugging
 
-  def simulateFire(): Unit = {
+  def findFirstDeviceWithCapability(cap: String): Option[(String,Long)] = {
     if (devices.nonEmpty) {
-      devices.foreach { e=>
-        val (deviceId,de) = e
-        info(s"polling sensors of device: $deviceId")
-        de.sensors.foreach { e=>
-          val (sensorNo,si) = e
-          si.capabilities.foreach { e=>
+      devices.foreach { e =>
+        val (deviceId, de) = e
+        de.sensors.foreach { e =>
+          val (sensorNo, si) = e
+          si.capabilities.foreach { e =>
             val sensorCap = e._1
-            if (sensorCap == "fire") {
-              val fireReading = SentinelFireReading(deviceId,sensorNo.toInt,"42", DateTime.now, 0.942)
-              publish( new SentinelUpdates( Seq(fireReading)))
-              return
+            if (sensorCap == cap) {
+              return Some(deviceId, sensorNo)
             }
           }
         }
       }
     }
-    warning(s"cannot simulate fire - no suitable device found")
+    None
+  }
+
+  def simulateFire(): Unit = {
+    findFirstDeviceWithCapability("fire") match {
+      case Some((deviceId,sensorNo)) =>
+        val fireReading = SentinelFireReading(deviceId,sensorNo.toInt,"42", DateTime.now, 0.942)
+        publish( new SentinelUpdates( Seq(fireReading)))
+      case None =>  warning(s"cannot simulate fire - no suitable device found")
+    }
+  }
+
+  def simulateSmoke(): Unit = {
+    findFirstDeviceWithCapability("smoke") match {
+      case Some((deviceId,sensorNo)) =>
+        val fireReading = SentinelSmokeReading(deviceId,sensorNo.toInt,"42", DateTime.now, 0.942)
+        publish( new SentinelUpdates( Seq(fireReading)))
+      case None =>  warning(s"cannot simulate smoke - no suitable device found")
+    }
   }
 }

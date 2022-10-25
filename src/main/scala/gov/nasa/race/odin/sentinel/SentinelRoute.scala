@@ -26,7 +26,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.{BusEvent, ParentActor}
+import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient}
 import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute, HttpServer, PushWSRaceRoute, ResponseData, WSContext}
 import gov.nasa.race.cesium.CesiumRoute
 import gov.nasa.race.ifSome
@@ -54,7 +54,7 @@ import SentinelRoute._
  *   - websocket handlers
  *
  */
-trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute {
+trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceDataClient {
 
   private val writer = new JsonWriter()
 

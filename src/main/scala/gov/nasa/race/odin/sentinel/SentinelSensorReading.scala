@@ -428,6 +428,7 @@ trait SentinelFireParser extends UTF8JsonPullParser {
     if (isInObject) {
       foreachMemberInCurrentObject {
         case PROB => prob = unQuotedValue.toDouble
+          if (prob < 0) println(s"@@@ ARGGH $unQuotedValue -> $prob")
         case _ => // ignore other members
       }
       Some(SentinelFireReading(deviceId,sensorNo,recordId,date,prob))

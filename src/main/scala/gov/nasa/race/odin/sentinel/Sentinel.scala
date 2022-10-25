@@ -260,7 +260,7 @@ class SentinelParser extends UTF8JsonPullParser
             case CAPS => caps = readCurrentStringArray()
           }
           if (sensorNo >= 0 && caps.nonEmpty) {
-            val capRecs = caps.foldLeft(mutable.Map.empty[CharSequence,String]) { (acc,c) => acc += (c -> "")}
+            val capRecs = caps.foldLeft(mutable.Map.empty[CharSequence,Option[SentinelSensorReading]]) { (acc,c) => acc += (c -> None)}
             sensorList += SentinelSensorInfo( sensorNo, part, capRecs)
           }
         }
@@ -315,9 +315,9 @@ case class SentinelDeviceInfo (deviceId: String, info: String)
 
 /**
  * struct we populate from a sensor query response and use to keep track of last received sensor records
- * capabilities is a map sensorType -> recordId
+ * capabilities is a map sensorType -> last reading
  */
-case class SentinelSensorInfo (sensorNo: Int, partNo: String, capabilities: mutable.Map[CharSequence,String])
+case class SentinelSensorInfo (sensorNo: Int, partNo: String, capabilities: mutable.Map[CharSequence,Option[SentinelSensorReading]])
 
 trait SentinelNotification
 
