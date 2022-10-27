@@ -186,9 +186,9 @@ function initSentinelView() {
             { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.showDetails, toggleShowDetails, null) },
             { name: "id", width: "4rem", attrs: ["alignLeft"], map: e => e.sentinel.deviceName },
             { name: "", width: "1.5rem", attrs: [], map: e => e.alertStatus() },
-            { name: "fire", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.fireStatus() },
-            { name: "smoke", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.smokeStatus() },
-            { name: "img", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.imageStatus() },
+            { name: "fire", tip: "fire probability [0..1]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.fireStatus() },
+            { name: "smoke", tip: "smoke probability [0..1]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.smokeStatus() },
+            { name: "img", tip: "number of available images", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.imageStatus() },
             { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.sentinel.timeRecorded) }
         ]);
     }
@@ -214,23 +214,23 @@ function initListView (id, colSpecs) {
 }
 function initSentinelFireView() {
     return initListView( "sentinel.fire.list", [
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => e.fire.fireProb.toFixed(2) },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "prob", tip: "fire probability [0..1]", width: "6rem", attrs: ["fixed", "alignRight"], map: e => e.fire.fireProb.toFixed(2) },
         ui.listItemSpacerColumn(),
         { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
     ]);
 }
 function initSentinelSmokeView() {
     return initListView( "sentinel.smoke.list", [
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "prob", width: "6rem", attrs: ["fixed", "alignRight"], map: e => e.smoke.smokeProb.toFixed(2) },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "prob", tip: "smoke probability [0..1]", width: "6rem", attrs: ["fixed", "alignRight"], map: e => e.smoke.smokeProb.toFixed(2) },
         ui.listItemSpacerColumn(),
         { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
     ]);
 }
 function initSentinelGasView() {
     return initListView( "sentinel.gas.list", [
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "hum", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.gas.hummidity) }, // SIC! humidity
         { name: "pres", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.gas.pressure) },
         { name: "alt", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.gas.altitude) },
@@ -240,7 +240,7 @@ function initSentinelGasView() {
 }
 function initSentinelThermoView() {
     return initListView( "sentinel.thermo.list", [
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "temp", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.thermometer.temperature) },
         ui.listItemSpacerColumn(),
         { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
@@ -248,7 +248,7 @@ function initSentinelThermoView() {
 }
 function initSentinelAnemoView() {
     return initListView( "sentinel.anemo.list", [
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "dir", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.anemometer.angle) },
         { name: "spd", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.anemometer.speed) },
         ui.listItemSpacerColumn(),
@@ -257,7 +257,7 @@ function initSentinelAnemoView() {
 }
 function initSentinelVocView() {
     return initListView( "sentinel.voc.list", [
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "tvoc", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.voc.TVOC) },
         { name: "eco2", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.voc.eCO2) },
         ui.listItemSpacerColumn(),
@@ -266,7 +266,7 @@ function initSentinelVocView() {
 }
 function initSentinelAccelView() {
     return initListView( "sentinel.accel.list", [
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "ax", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.ax) },
         { name: "ay", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.ay) },
         { name: "az", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.az) },
@@ -276,7 +276,7 @@ function initSentinelAccelView() {
 }
 function initSentinelGpsView() {
     return initListView( "sentinel.gps.list", [
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "lat", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.latitude) },
         { name: "lon", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.longitude) },
         ui.listItemSpacerColumn(),
@@ -286,8 +286,8 @@ function initSentinelGpsView() {
 function initSentinelImagesView() {
     return initListView( "sentinel.image.list", [
         { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.window, toggleShowImage, null) },
-        { name: "sen", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "type", width: "2rem", attrs: [], map: e => e.image.isInfrared ? "ir" : "vis" },
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "type", tip: "ir: infrared, vis: visible", width: "2rem", attrs: [], map: e => e.image.isInfrared ? "ir" : "vis" },
         ui.listItemSpacerColumn(),
         { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
     ]);

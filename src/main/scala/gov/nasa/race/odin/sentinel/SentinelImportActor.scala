@@ -242,16 +242,18 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
     }
   }
 
+
   def updateDevice (r: SentinelSensorReading): Boolean = {
     val recordType = r.readingType
-    for (di <- devices.get(r.deviceId);
-         si <- di.sensors.get(r.sensorNo);
-         maybeLastRec <- si.capabilities.get(recordType)) {
-      maybeLastRec match {
-        case Some(rLast) =>
-          if (rLast.recordId == r.recordId || rLast.date > r.date) return false  // we already have this or a newer record
-          else si.capabilities += (recordType -> Some(r))
-        case None => si.capabilities += (recordType -> Some(r)) // no record for this sensor capability yet
+
+    for (di <- devices.get(r.deviceId); si <- di.sensors.get(r.sensorNo)) {
+      si.capabilities.get(recordType) match {
+        case Some(None) => // first record
+          si.capabilities += (recordType -> Some(r))
+        case Some(Some(rLast)) =>
+          if (rLast.recordId == r.recordId || rLast.date > r.date) return false  // we already have it
+          si.capabilities += (recordType -> Some(r))
+        case None => return false  // unknown capability
       }
 
       lastUpdate = r.date

@@ -19,7 +19,7 @@ package gov.nasa.race.odin.sentinel
 import akka.http.scaladsl.model.ContentType
 import gov.nasa.race.Dated
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{JsonSerializable, JsonWriter, UTF8JsonPullParser}
+import gov.nasa.race.common.{CharSeqByteSlice, JsonSerializable, JsonWriter, UTF8JsonPullParser}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Speed.MetersPerSecond
 import gov.nasa.race.uom.Temperature.{Celsius, UndefinedTemperature}
@@ -67,7 +67,7 @@ trait SentinelSensorReading extends Dated with JsonSerializable {
   val sensorNo: Int
   val recordId: String
 
-  def readingType: CharSequence
+  def readingType: CharSeqByteSlice
 
   // aggregate serializer (not including deviceId)
   def serializeDataTo (w: JsonWriter): Unit

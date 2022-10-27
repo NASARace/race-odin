@@ -17,7 +17,7 @@
 package gov.nasa.race.odin.sentinel
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{JsonSerializable, JsonWriter, UTF8JsonPullParser}
+import gov.nasa.race.common.{CharSeqByteSlice, ConstCharSequences, ConstUtf8Slice, JsonSerializable, JsonWriter, UTF8JsonPullParser}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.{Dated, ifSome}
 
@@ -251,16 +251,16 @@ class SentinelParser extends UTF8JsonPullParser
         foreachElementInCurrentArray {
           var sensorNo: Int = -1
           var part: String = ""
-          var caps = Seq.empty[String]
+          var caps = Seq.empty[CharSeqByteSlice]
 
           foreachMemberInCurrentObject {
             case NO => sensorNo = unQuotedValue.toInt
             case PART => part = quotedValue.toString()
             case CONFS => skipPastAggregate() // ignore for now
-            case CAPS => caps = readCurrentStringArray()
+            case CAPS => caps = readCurrentStringArray().map( s=> ConstUtf8Slice(s))
           }
           if (sensorNo >= 0 && caps.nonEmpty) {
-            val capRecs = caps.foldLeft(mutable.Map.empty[CharSequence,Option[SentinelSensorReading]]) { (acc,c) => acc += (c -> None)}
+            val capRecs = caps.foldLeft(mutable.Map.empty[CharSeqByteSlice,Option[SentinelSensorReading]]) { (acc,c) => acc += (c -> None)}
             sensorList += SentinelSensorInfo( sensorNo, part, capRecs)
           }
         }
@@ -317,7 +317,7 @@ case class SentinelDeviceInfo (deviceId: String, info: String)
  * struct we populate from a sensor query response and use to keep track of last received sensor records
  * capabilities is a map sensorType -> last reading
  */
-case class SentinelSensorInfo (sensorNo: Int, partNo: String, capabilities: mutable.Map[CharSequence,Option[SentinelSensorReading]])
+case class SentinelSensorInfo (sensorNo: Int, partNo: String, capabilities: mutable.Map[CharSeqByteSlice,Option[SentinelSensorReading]])
 
 trait SentinelNotification
 
