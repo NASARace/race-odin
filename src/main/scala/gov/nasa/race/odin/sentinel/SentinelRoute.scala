@@ -30,11 +30,12 @@ import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient}
 import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute, HttpServer, PushWSRaceRoute, ResponseData, WSContext}
 import gov.nasa.race.cesium.CesiumRoute
 import gov.nasa.race.ifSome
-import gov.nasa.race.odin.sentinel.SentinelSensorReading.IMAGE_PREFIX
-import gov.nasa.race.ui.{extModule, uiButton, uiField, uiFieldGroup, uiIcon, uiList, uiNumField, uiPanel, uiRowContainer, uiTab, uiTabbedContainer, uiWindow}
+import gov.nasa.race.odin.sentinel.SentinelSensorReading.{DefaultImageDir, IMAGE_PREFIX}
+import gov.nasa.race.ui.{extModule, uiButton, uiColumnContainer, uiField, uiFieldGroup, uiIcon, uiList, uiNumField, uiPanel, uiRowContainer, uiTab, uiTabbedContainer, uiWindow}
 import gov.nasa.race.util.FileUtils
 import scalatags.Text
 
+import scala.collection.immutable.Iterable
 import java.net.InetSocketAddress
 import java.io.File
 
@@ -57,12 +58,13 @@ import SentinelRoute._
 trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceDataClient {
 
   private val writer = new JsonWriter()
+  private val sentinelCmdParser = new SentinelParser()
 
   var sentinels: SentinelSet = SentinelSet(Map.empty[String,Sentinel])
   var sentinelsMsg: Option[TextMessage.Strict] = None
 
   val sentinelDir = config.getString("sentinel.dir")
-  val imageDir = FileUtils.ensureWritableDir(config.getStringOrElse("sentinel.image-dir", s"tmp/delphire/$IMAGE_PREFIX")).get
+  val imageDir = FileUtils.ensureWritableDir(config.getStringOrElse("sentinel.image-dir", DefaultImageDir)).get
   val sentinelAssets = getSymbolicAssetMap("sentinel.assets", config,
     Seq(("sentinel","sentinel-sym.png"), ("fire","fire.png"), ("smoke", "smoke.png"), ("fire-smoke", "fire-smoke.png")))
   
@@ -126,7 +128,8 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
   pointDC: new Cesium.DistanceDisplayCondition( $pointDist, Number.MAX_VALUE),
   billboardDC: new Cesium.DistanceDisplayCondition( 0, $pointDist),
   imageWidth: ${cfg.getIntOrElse("img-width", 400)},
-  maxHistory: ${cfg.getIntOrElse("max-history", 10)}
+  maxHistory: ${cfg.getIntOrElse("max-history", 10)},
+  zoomHeight: ${cfg.getIntOrElse("zoom-height", 80000)}
 };"""
     //... and more to follow
   }
@@ -138,7 +141,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
 
     uiWindow(title, "sentinel", "sentinel-icon.svg")(
       cesiumLayerPanel("sentinel", "main.toggleShowSentinel(event)"),
-      uiList("sentinel.list", 10, "main.selectSentinel(event)"),
+      uiList("sentinel.list", 10, "main.selectSentinel(event)", dblClickAction = "main.zoomToSentinel(event)"),
       uiPanel("data", false)(
         uiTabbedContainer()(
           uiTab("fire", false)(uiList("sentinel.fire.list", maxDataRows)),
@@ -151,18 +154,13 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
           uiTab("accel", false)(uiList("sentinel.accel.list", maxDataRows)),
           uiTab("gps",false)(uiList("sentinel.gps.list", maxDataRows))
         )
+      ),
+      uiPanel("diagnostics", false)(
+        uiColumnContainer()(
+          uiButton("upload fire image", "main.uploadFireImage()", 10),
+          uiField("response", "sentinel.response", true, "25rem")
+        )
       )
-      /*
-      uiPanel("fire", false)(uiList("sentinel.fire.list", maxDataRows)),
-      uiPanel("smoke", false)(uiList("sentinel.smoke.list", maxDataRows)),
-      uiPanel("camera", false)(uiList("sentinel.image.list", maxDataRows, "main.selectImage(event)")),
-      uiPanel("gas", false)(uiList("sentinel.gas.list", maxDataRows)),
-      uiPanel("thermometer", false)(uiList("sentinel.thermo.list", maxDataRows)),
-      uiPanel("anemometer", false)(uiList("sentinel.anemo.list", maxDataRows)),
-      uiPanel("volatile organic compounds", false)(uiList("sentinel.voc.list", maxDataRows)),
-      uiPanel("accelerometer", false)(uiList("sentinel.accel.list", maxDataRows)),
-      uiPanel("gps",false)(uiList("sentinel.gps.list", maxDataRows))
-       */
     )
   }
 
@@ -196,6 +194,12 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
         sentinels = sm
         sentinelsMsg = None // re-serialize on next request
       }
+
+    case cr: SentinelCommandResponse =>
+      ifSome(cr.text) { txt=>
+        val msg = s"""{"cmdResponse":"${JsonWriter.toJsonString(txt)}"}"""
+        pushTo(cr.remoteAddress, TextMessage.Strict(msg))
+      }
   }
 
   override def receiveData: Receive = receiveSentinelData.orElse(super.receiveData)
@@ -215,6 +219,25 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
       }
 
       ifSome(sentinelsMsg) { tm => pushTo(remoteAddr, queue, tm) }
+    }
+  }
+
+  /**
+   * handle client messages (commands)
+   */
+  override protected def handleIncoming (ctx: WSContext, m: Message): Iterable[Message] = {
+    handleIncomingSentinelMsg(ctx, m)
+    super.handleIncoming(ctx,m) // no own returns
+  }
+
+  def handleIncomingSentinelMsg (ctx: WSContext, m: Message): Unit = {
+    // we parse here to check for malformed cmd requests before we send them to other actors
+    withStrictMessageData(m) { data=>
+      if (sentinelCmdParser.initialize(data)) {
+        ifSome(sentinelCmdParser.parseSentinelCommand()){ cmd =>
+          publishData( SentinelCommandRequest( actorRef, ctx.remoteAddress, cmd, true))
+        }
+      }
     }
   }
 }

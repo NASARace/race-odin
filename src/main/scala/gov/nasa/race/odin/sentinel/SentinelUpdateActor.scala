@@ -81,6 +81,7 @@ class SentinelUpdateActor (val config: Config) extends SubscribingRaceActor with
 
   override def handleMessage: Receive = {
     case BusEvent (_,ssrs: SentinelUpdates,_) => processSensorReadings(ssrs)
+    case BusEvent (_,scr:SentinelCommandResponse,_) => // we don't care, it doesn't change our data
   }
 
   def processSensorReadings(ssrs: SentinelUpdates): Unit = {

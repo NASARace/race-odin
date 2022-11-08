@@ -20,6 +20,7 @@ import akka.http.scaladsl.model.ContentType
 import gov.nasa.race.Dated
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{CharSeqByteSlice, JsonSerializable, JsonWriter, UTF8JsonPullParser}
+import gov.nasa.race.odin.sentinel.Sentinel.{DEVICE_ID, SENSOR_NO}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Speed.MetersPerSecond
 import gov.nasa.race.uom.Temperature.{Celsius, UndefinedTemperature}
@@ -31,12 +32,9 @@ object SentinelSensorReading {
   //--- lexical constants
   val READING = asc("sentinelReading")
   val UPDATES = asc("sentinelUpdates")
-  val DEVICE_ID = asc("deviceId")
   val DEVICE_NAME = asc("deviceName")
   val RECORD_ID = asc("recordId")
   val ID = asc("id") // TODO - this should be recordId
-  val SENSOR_NO = asc("sensorNo")
-  val SENSOR_TYPE = asc("type")  // ?? should that be sensorCapability ?
   val TIME_RECORDED = asc("timeRecorded")
   val GPS = asc("gps"); val LAT = asc("latitude"); val LON = asc("longitude")
   val MAG = asc("magnetometer"); val MX = asc("mx"); val MY = asc("my"); val MZ = asc("mz")
@@ -51,6 +49,7 @@ object SentinelSensorReading {
   val SMOKE = asc("smoke"); val SMOKE_PROB = asc("smokeProb")
 
   val IMAGE_PREFIX = "image"
+  val DefaultImageDir = s"tmp/delphire/$IMAGE_PREFIX"
 }
 import SentinelSensorReading._
 

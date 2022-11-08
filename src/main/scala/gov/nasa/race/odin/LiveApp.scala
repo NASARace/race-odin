@@ -17,7 +17,7 @@
 package gov.nasa.race.odin
 
 import com.typesafe.config.Config
-import gov.nasa.race.cesium.{CesiumGoesrRoute, CesiumJpssRoute, CesiumTrackRoute, GeoLayerRoute}
+import gov.nasa.race.cesium.{CesiumGoesrRoute, CesiumJpssRoute, CesiumTrackRoute, CesiumWindRoute, GeoLayerRoute, ImageryLayerRoute}
 import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http.DocumentRoute
 import gov.nasa.race.odin.sentinel.SentinelRoute
@@ -28,7 +28,9 @@ import gov.nasa.race.ui.UiSettingsRoute
  */
 class LiveApp (val parent: ParentActor, val config: Config) extends DocumentRoute
   with UiSettingsRoute
+  with ImageryLayerRoute
   with GeoLayerRoute
+  with CesiumWindRoute
   with CesiumTrackRoute
   with CesiumGoesrRoute
   with CesiumJpssRoute

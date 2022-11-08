@@ -13,7 +13,8 @@ NASA Ames Research Center
 
 
 ## Current Situation
-* what is wrong with this picture
+* integration: existing data in various locations, formats
+* extensibility: no easy way to integrate own static and **dynamic** data 
 
 <img src="./images/current.svg" class="center scale85">
  

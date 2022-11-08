@@ -10,6 +10,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 class SentinelSpec extends AnyFlatSpec with RaceSpec {
   val resourcePath = "src/resources"
 
+  /* old format is deprecated
   "a SentinelParser" should "parse a known accel update input source" in {
     val input = FileUtils.fileContentsAsString(baseResourceFile("sentinel-accel-records.json")).get
     println(s"--- parsing:\n$input")
@@ -21,6 +22,7 @@ class SentinelSpec extends AnyFlatSpec with RaceSpec {
     println(s"got ${updates.length} updates")
     updates.foreach(println)
   }
+   */
 
   "a SentinelParser" should "parse known device messages" in {
     val input = FileUtils.fileContentsAsString(baseResourceFile("sentinel-devices.json")).get
@@ -81,5 +83,16 @@ class SentinelSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"got ${readings.size} sensor records")
     readings.foreach(println)
+  }
+
+  "a SentinelParser" should "parse known SentinelCommands" in {
+    val input = """{"event":"command","data":{"action":"inject","deviceIds":["roo7gd1dldn3"]}}"""
+    println(s"--- parsing:\n$input")
+
+    val parser = new SentinelParser()
+    parser.initialize(input.getBytes)
+    val cmd = parser.parseSentinelCommand()
+
+    println(s"got command: $cmd")
   }
 }

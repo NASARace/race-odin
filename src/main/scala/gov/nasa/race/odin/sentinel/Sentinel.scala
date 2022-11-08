@@ -35,14 +35,19 @@ object Sentinel {
   val DATA = asc("data")
   val IMAGES = asc("images")
   val INFO = asc("info")
+  val DEVICE_ID = asc("deviceId")
+  val SENSOR_NO = asc("sensorNo")
+  val SENSOR_TYPE = asc("type")  // ?? should that be sensorCapability ?
   val NO = asc("no")
   val PART = asc("partNo")
   val CAPS = asc("capabilities")
   val CONFS = asc("camConfs")
   val CLAIMS = asc("claims")
   val EVIDENCE = asc("evidences")
-  val JOINED = asc("joined")
-  val NEW_RECORD = asc("NewRecord")
+  val EVENT = asc("event")
+  val ACTION = asc("action")
+  val INJECT = asc("inject")
+  val DEVICE_IDS = asc("deviceIds")
 
   val MaxReadings = 10  // TODO - do we need per-sensor type limits and should it be configurable?
 }
@@ -140,7 +145,8 @@ case class Sentinel (
 class SentinelParser extends UTF8JsonPullParser
     with SentinelAccelParser with SentinelAnemoParser with SentinelGasParser with SentinelMagParser with SentinelThermoParser
     with SentinelFireParser with SentinelGyroParser with SentinelVocParser with SentinelGpsParser
-    with SentinelSmokeParser with SentinelImageParser {
+    with SentinelSmokeParser with SentinelImageParser
+    with SentinelNotificationParser with SentinelCommandParser {
 
   def parseRecords(): Seq[SentinelSensorReading] = {
     val updates = ArrayBuffer.empty[SentinelSensorReading]
@@ -270,42 +276,6 @@ class SentinelParser extends UTF8JsonPullParser
     sensorList.toSeq
   }
 
-  /**
-   * parse sensor record notification messages (received through websocket). There are currently two message types:
-   *
-   * { "joined":["dizwqq96w36j"] }
-   * { "NewRecord":{"deviceId":"dizwqq96w36j", "sensorNo":0, "type":"magnetometer"}}
-   *
-   * TODO - this should use regular syntax
-   */
-  def parseNotification(): Option[SentinelNotification] = {
-    ensureNextIsObjectStart()
-    foreachMemberInCurrentObject {
-      case JOINED => return parseSentinelJoinNotification()
-      case NEW_RECORD => return parseSentinelRecordNotification()
-      case other => warning(s"ignore unknown notification '$other''");
-    }
-    None
-  }
-
-  def parseSentinelJoinNotification(): Option[SentinelJoinNotification] = {
-    val devIds = readCurrentStringArray()
-    if (devIds.nonEmpty) Some(SentinelJoinNotification(devIds)) else None
-  }
-
-  def parseSentinelRecordNotification(): Option[SentinelRecordNotification] = {
-    var deviceId: String = null
-    var sensorNo: Int = -1
-    var sensorType: String = null
-
-    foreachMemberInCurrentObject {
-      case DEVICE_ID => deviceId = quotedValue.intern
-      case SENSOR_NO => sensorNo = unQuotedValue.toInt
-      case SENSOR_TYPE => sensorType = quotedValue.intern
-    }
-
-    if (deviceId != null && sensorNo >= 0 && sensorType != null) Some(SentinelRecordNotification(deviceId,sensorNo,sensorType)) else None
-  }
 }
 
 /**
@@ -318,15 +288,3 @@ case class SentinelDeviceInfo (deviceId: String, info: String)
  * capabilities is a map sensorType -> last reading
  */
 case class SentinelSensorInfo (sensorNo: Int, partNo: String, capabilities: mutable.Map[CharSeqByteSlice,Option[SentinelSensorReading]])
-
-trait SentinelNotification
-
-/**
- * notification about successful join for device/sensor update notifications
- */
-case class SentinelJoinNotification (deviceIds: Seq[String]) extends SentinelNotification
-
-/**
- * notification that there is a new sensor record available
- */
-case class SentinelRecordNotification(devideId: String, sensorNo: Int, sensorCapability: String) extends SentinelNotification

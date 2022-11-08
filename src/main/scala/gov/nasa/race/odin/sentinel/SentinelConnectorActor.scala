@@ -21,23 +21,27 @@ import akka.http.scaladsl.model.HttpHeader
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model.ws.Message
 import com.typesafe.config.Config
+import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.{PeriodicRaceActor, PublishingRaceActor}
+import gov.nasa.race.core.{BusEvent, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.http.{HttpActor, SyncWSAdapterActor, WsConnectRequest}
-import gov.nasa.race.ifInstanceOf
-import gov.nasa.race.odin.sentinel.SentinelSensorReading.IMAGE_PREFIX
+import gov.nasa.race.{ifInstanceOf, ifSome, ifTrueSome}
+import gov.nasa.race.odin.sentinel.SentinelSensorReading.{DefaultImageDir, IMAGE_PREFIX}
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.uom.Time.Seconds
 import gov.nasa.race.util.FileUtils
 
 import java.io.File
+import java.nio.file.{Files, StandardCopyOption}
+import scala.collection.immutable.Queue
 import scala.collection.mutable
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.{Success, Failure => FailureEx}
 
 /**
- * actor for realtime import of Sentinel sensor data from Delphire servers
+ * actor for realtime (bi-directional) communication with Delphire Sentinel fire sensors
  */
-class SentinelImportActor (val config: Config) extends PublishingRaceActor with HttpActor with SyncWSAdapterActor with PeriodicRaceActor  {
+class SentinelConnectorActor(val config: Config) extends PublishingRaceActor with SubscribingRaceActor with HttpActor with SyncWSAdapterActor with PeriodicRaceActor  {
 
   // not thread-safe, access only from actor thread
   class DeviceEntry (val deviceInfo: SentinelDeviceInfo) {
@@ -66,15 +70,16 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
   val reconnectInterval: FiniteDuration = config.getFiniteDurationOrElse("reconnect-interval", 30.seconds)
 
   val maxHistory = config.getIntOrElse("max-history", 5) // number of recent readings. do we need that per-sensor?
-  val imageDir = FileUtils.ensureWritableDir(config.getStringOrElse("image-dir", s"tmp/delphire/$IMAGE_PREFIX")).get
+  val imageDir = FileUtils.ensureWritableDir(config.getStringOrElse("image-dir", DefaultImageDir)).get
 
+  val jsonWriter = new JsonWriter()
   val parser = new SentinelParser
 
   val devices: mutable.Map[String,DeviceEntry] = mutable.Map.empty
   var lastUpdate: DateTime = DateTime.UndefinedDateTime
 
   //--- RaceActor interface
-  override def handleMessage: Receive = handleSentinelImportMessage.orElse( handleWsMessage)
+  override def handleMessage: Receive = handleSentinelRaceMessage.orElse( handleWsMessage)
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     super.onStartRaceActor(originator) && {
@@ -135,14 +140,19 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
 
   //--- actor specifics
 
-  // websocket messages
-  def handleSentinelNotification(data: Array[Byte]): Unit = {
+  // websocket messages received from Sentinel server
+  def handleSentinelNotification (data: Array[Byte]): Unit = {
+    //println(s"@@ got '${new String(data)}'")
     if (parser.initialize(data)) {
       parser.parseNotification() match {
         case Some(sn) =>
           sn match {
-            case sjn: SentinelJoinNotification => info(s"""joined sentinel notification for devices: ${sjn.deviceIds.mkString(",")}""")
-            case srn: SentinelRecordNotification => requestUpdateRecord( srn.devideId, srn.sensorNo, srn.sensorCapability)
+            case n: SentinelJoinNotification => info(s"""joined sentinel notification for devices: ${n.deviceIds.mkString(",")}""")
+            case n: SentinelRecordNotification => requestUpdateRecord( n.devideId, n.sensorNo, n.sensorCapability)
+
+            case n: SentinelReceivedNotification => //processCommandResponse(n, data)
+            case n: SentinelActionNotification => processCommandResponse(n, data)
+            case n: SentinelEventNotification => processSentinelEvent(n)
           }
 
         case None => warning(s"ignoring malformed sensor notification: ${new String(data)}")
@@ -150,8 +160,12 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
     }
   }
 
-  // actor (self) messages
-  def handleSentinelImportMessage: Receive = {
+  // messages received from the bus or point-to-point
+  def handleSentinelRaceMessage: Receive = {
+    //--- user commands (via route)
+    case BusEvent(_,cr:SentinelCommandRequest,_) => processSentinelCommandRequest(cr)
+
+    //--- self messages
     case rsp: DeviceResponse => processDevices(rsp)
     case rsp: SensorResponse => processSensors(rsp)
     case rsp: RecordResponse => processRecords(rsp)
@@ -292,31 +306,66 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
     }
   }
 
+  //--- commands
+
+  // TODO - this should eventually become a Map (requestId->cmdRequest)
+  var pendingCmdRequests: Queue[SentinelCommandRequest] = Queue.empty
+
+  def processSentinelCommandRequest(cr: SentinelCommandRequest): Unit = {
+    val msg = jsonWriter.toJson(cr.cmd)
+    info(s"sending command: '$msg'")
+    pendingCmdRequests = pendingCmdRequests.enqueue(cr)
+
+    processOutgoingMessage(msg)
+  }
+
+  def processCommandResponse (notification: SentinelNotification, data: Array[Byte]): Unit = {
+    pendingCmdRequests.dequeueOption match {
+      case Some((cr,newQueue)) =>
+        pendingCmdRequests = newQueue
+        val msgText = ifTrueSome(cr.requestText){ new String(data) }
+        cr.sender ! SentinelCommandResponse(cr.remoteAddress, Some(notification), msgText)
+
+      case None =>
+        warning(s"unexpected command response: $notification")
+    }
+  }
+
+  //--- events
+
+  // TODO - not yet clear what we do with these
+  def processSentinelEvent(notification: SentinelEventNotification): Unit = {
+    warning(s"ignoring $notification")
+  }
+
   //--- simulation & debugging
 
-  def findFirstDeviceWithCapability(cap: String): Option[(String,Long)] = {
-    if (devices.nonEmpty) {
-      devices.foreach { e =>
-        val (deviceId, de) = e
-        de.sensors.foreach { e =>
-          val (sensorNo, si) = e
-          si.capabilities.foreach { e =>
-            val sensorCap = e._1
-            if (sensorCap == cap) {
-              return Some(deviceId, sensorNo)
-            }
-          }
-        }
-      }
-    }
-    None
-  }
+  val fireImage: Option[String] = config.getOptionalFile("fire-image").map( file => {
+    val fname = file.getName
+    val dest = new File(imageDir, fname)
+    Files.copy(file.toPath, dest.toPath, StandardCopyOption.REPLACE_EXISTING)
+    fname
+  })
 
   def simulateFire(): Unit = {
     findFirstDeviceWithCapability("fire") match {
       case Some((deviceId,sensorNo)) =>
-        val fireReading = SentinelFireReading(deviceId,sensorNo.toInt,"42", DateTime.now, 0.942)
-        publish( new SentinelUpdates( Seq(fireReading)))
+        val date = DateTime.now
+        fireImage match {
+          case Some(fileName) =>
+            info(s"simulating fire with image $fileName at $date")
+            val imgReading = SentinelImageReading(deviceId,sensorNo,"42", date, fileName, false)
+            publish( SentinelUpdates( Seq(imgReading)))
+
+            val fireReading = SentinelFireReading(deviceId,sensorNo,"43", date + Seconds(5), 0.942)
+            scheduleOnce(5.seconds) { publish(SentinelUpdates( Seq(fireReading))) }
+
+          case None =>
+            info(s"simulating fire at $date")
+            val fireReading = SentinelFireReading(deviceId,sensorNo,"43", date, 0.942)
+            publish(SentinelUpdates( Seq(fireReading)))
+        }
+
       case None =>  warning(s"cannot simulate fire - no suitable device found")
     }
   }
@@ -328,5 +377,25 @@ class SentinelImportActor (val config: Config) extends PublishingRaceActor with 
         publish( new SentinelUpdates( Seq(fireReading)))
       case None =>  warning(s"cannot simulate smoke - no suitable device found")
     }
+  }
+
+  def findFirstDeviceWithCapability (cap: String): Option[(String,Int)] = {
+    var deviceId: String = null
+    var sensorNo: Long = 0
+
+    devices.find( e => {
+      val (devId,de) = e
+      de.sensors.exists(e => {
+        val (sn, si) = e
+        si.capabilities.exists( e => {
+          val (cs, _) = e
+          if (cs.equalsString(cap)) {
+            deviceId = devId
+            sensorNo = sn
+            true
+          } else false
+        })
+      })
+    }).map(_ => (deviceId,sensorNo.toInt))
   }
 }
