@@ -78,6 +78,8 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
   val devices: mutable.Map[String,DeviceEntry] = mutable.Map.empty
   var lastUpdate: DateTime = DateTime.UndefinedDateTime
 
+  var isPolling: Boolean = false
+
   //--- RaceActor interface
   override def handleMessage: Receive = handleSentinelRaceMessage.orElse( handleWsMessage)
 
@@ -90,7 +92,8 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
 
   //--- PeriodicRaceActor interface (in case we are either configured or have to fall back to polling)
   override def onRaceTick(): Unit = {
-    if (usePolling) pollDevices()
+    if (isPolling) pollDevices()
+    super.onRaceTick()
   }
 
   //--- WsAdapterActor interface
@@ -131,6 +134,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
     } else {
       if (usePolling) {
         warning(s"max connection attempts to $uri exceeded, falling back to polling")
+        isPolling = true
         startScheduler
       } else {
         warning(s"max connection attempts to $uri exceeded, data acquisition terminated.")
@@ -142,7 +146,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
 
   // websocket messages received from Sentinel server
   def handleSentinelNotification (data: Array[Byte]): Unit = {
-    //println(s"@@ got '${new String(data)}'")
+    debug(s"received notification '${new String(data)}'")
     if (parser.initialize(data)) {
       parser.parseNotification() match {
         case Some(sn) =>
@@ -312,7 +316,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
   var pendingCmdRequests: Queue[SentinelCommandRequest] = Queue.empty
 
   def processSentinelCommandRequest(cr: SentinelCommandRequest): Unit = {
-    val msg = jsonWriter.toJson(cr.cmd)
+    val msg = jsonWriter.toNewJson(cr.cmd)
     info(s"sending command: '$msg'")
     pendingCmdRequests = pendingCmdRequests.enqueue(cr)
 
