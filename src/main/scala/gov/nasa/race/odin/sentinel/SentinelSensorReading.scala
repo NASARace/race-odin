@@ -40,7 +40,7 @@ object SentinelSensorReading {
   val MAG = asc("magnetometer"); val MX = asc("mx"); val MY = asc("my"); val MZ = asc("mz")
   val GYRO = asc("gyroscope"); val GX = asc("gx"); val GY = asc("gy"); val GZ = asc("gz")
   val ACCEL = asc("accelerometer"); val AX = asc("ax"); val AY = asc("ay"); val AZ = asc("az")
-  val GAS = asc("gas"); val HUM = asc("hummidity"); val PRESS = asc("pressure"); val ALT = asc("altitude")
+  val GAS = asc("gas"); val HUM = asc("humidity"); val PRESS = asc("pressure"); val ALT = asc("altitude")
   val THERMO = asc("thermometer"); val TEMP = asc("temperature")
   val VOC = asc("voc"); val TVOC = asc("TVOC"); val ECO2 = asc("eCO2")
   val ANEMO = asc("anemometer"); val ANGLE = asc("angle"); val SPD = asc("speed")
@@ -359,7 +359,7 @@ trait SentinelVocParser extends UTF8JsonPullParser {
     var eco2: Int = 0
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case TEMP => tvoc = unQuotedValue.toInt
+        case TVOC => tvoc = unQuotedValue.toInt
         case ECO2 => eco2 = unQuotedValue.toInt
         case _ => // ignore other members
       }

@@ -17,7 +17,7 @@
 package gov.nasa.race.odin.sentinel
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{CharSeqByteSlice, ConstCharSequences, ConstUtf8Slice, JsonSerializable, JsonWriter, UTF8JsonPullParser}
+import gov.nasa.race.common.{CharSeqByteSlice, ConstCharSequences, ConstUtf8Slice, JsonParseException, JsonSerializable, JsonWriter, UTF8JsonPullParser}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.{Dated, ifSome}
 
@@ -147,6 +147,16 @@ class SentinelParser extends UTF8JsonPullParser
     with SentinelFireParser with SentinelGyroParser with SentinelVocParser with SentinelGpsParser
     with SentinelSmokeParser with SentinelImageParser
     with SentinelNotificationParser with SentinelCommandParser {
+
+  /* to debug parser exceptions:
+  override def exception(msg: String): JsonParseException = {
+    println("@@------------- JSON parse error")
+    println(dataAsString)
+    println("@@-------------")
+    Thread.dumpStack()
+    new JsonParseException(msg)
+  }
+   */
 
   def parseRecords(): Seq[SentinelSensorReading] = {
     val updates = ArrayBuffer.empty[SentinelSensorReading]

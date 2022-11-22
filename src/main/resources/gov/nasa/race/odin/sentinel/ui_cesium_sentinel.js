@@ -52,20 +52,18 @@ class SentinelAssets {
     constructor(symbol, details) {
         this.symbol = symbol; // billboard
         this.details = details; // gas coverage, camera-coverage, wind
-        this.fire = undefined;
     }
 
     updatePosition(lat,lon) {
-        if (this.symbol) {
-            this.symbol.position = Cesium.Cartesian3.fromDegrees(lon, lat)
-        }
+        let pos = Cesium.Cartesian3.fromDegrees(lon, lat)
+        if (this.symbol) this.symbol.position = pos;
+        if (this.details) this.details.position = pos;
     }
 
     showAssets (cond) {
         // TODO - is this right? we should just add/remove the sentinelDataSource
         if (this.symbol) this.symbol.show = cond;
         if (this.details) this.details.show = cond;
-        if (this.fire) this.fire.show = cond;
     }
 }
 
@@ -73,8 +71,6 @@ class SentinelEntry {
     constructor(sentinel) {
         this.id = sentinel.deviceId;
         this.sentinel = sentinel;
-        this.showDetails = false;
-
         this.assets = null;
     }
 
@@ -115,16 +111,6 @@ class SentinelEntry {
         return (images && images.length > 0) ? images.length : "-";
     }
 
-    setShowDetails(showIt) {
-        this.showDetails = showIt;
-
-        let assets = this.assets;
-        if (assets) {
-            if (assets.details) assets.details.show = showIt;
-            if (assets.fire) assets.fire.show = showIt;
-        }
-    }
-
     showAssets(cond) {
         if (this.assets) this.assets.showAssets(cond);
     }
@@ -151,14 +137,31 @@ class SentinelEntry {
         }
     }
 
-    firePosition() {  // TODO - this is just a mockup
-        let gps = this.sentinel.gps;
-        if (gps && gps.length > 0) {
-            let lat = gps[0].gps.latitude - 0.002;
-            let lon = gps[0].gps.longitude - 0.002;
-            return Cesium.Cartesian3.fromDegrees(lon, lat);
-        } else {
-            return Cesium.Cartesian3.fromDegrees(0, 0);  // TODO - we should move this out of sight
+    temperature() {
+        let thermo = this.sentinel.thermometer;
+        if (thermo && thermo.length > 0) {
+            return thermo[0].thermometer.temperature;
+        }
+    }
+
+    humidity() {
+        let gas = this.sentinel.gas;
+        if (gas && gas.length > 0) {
+            return gas[0].gas.humidity;
+        }
+    }
+
+    windSpeed() {
+        let anemo = this.sentinel.anemometer;
+        if (anemo && anemo.length > 0) {
+            return anemo[0].anemometer.speed;
+        }
+    }
+
+    windDirection() {
+        let anemo = this.sentinel.anemometer;
+        if (anemo && anemo.length > 0) {
+            return anemo[0].anemometer.angle;
         }
     }
 }
@@ -178,6 +181,8 @@ ui.registerLoadFunction(function initialize() {
     sentinelVocView = initSentinelVocView();
     sentinelGpsView = initSentinelGpsView();
 
+    initSentinelCmdList();
+
     uiCesium.setEntitySelectionHandler(sentinelSelection);
     ws.addWsHandler(config.wsUrl, handleWsSentinelMessages);
 
@@ -194,26 +199,16 @@ function initSentinelView() {
     let view = ui.getList("sentinel.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.showDetails, toggleShowDetails, null) },
+            { name: "", width: "2rem", attrs: [], map: e => e.alertStatus() },
             { name: "id", width: "4rem", attrs: ["alignLeft"], map: e => e.sentinel.deviceName },
-            { name: "", width: "1.5rem", attrs: [], map: e => e.alertStatus() },
             { name: "fire", tip: "fire probability [0..1]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.fireStatus() },
             { name: "smoke", tip: "smoke probability [0..1]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.smokeStatus() },
             { name: "img", tip: "number of available images", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.imageStatus() },
-            { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.sentinel.timeRecorded) }
+            ui.listItemSpacerColumn(),
+            { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.sentinel.timeRecorded) }
         ]);
     }
     return view;
-}
-
-function toggleShowDetails(event) {
-    let cb = ui.getCheckBox(event.target);
-    if (cb) {
-        let e = ui.getListItemOfElement(cb);
-        if (e) {
-            e.setShowDetails(ui.isCheckBoxSelected(cb));
-        }
-    }
 }
 
 function initListView (id, colSpecs) {
@@ -228,7 +223,7 @@ function initSentinelFireView() {
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "prob", tip: "fire probability [0..1]", width: "6rem", attrs: ["fixed", "alignRight"], map: e => e.fire.fireProb.toFixed(2) },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);
 }
 function initSentinelSmokeView() {
@@ -236,62 +231,63 @@ function initSentinelSmokeView() {
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "prob", tip: "smoke probability [0..1]", width: "6rem", attrs: ["fixed", "alignRight"], map: e => e.smoke.smokeProb.toFixed(2) },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);
 }
 function initSentinelGasView() {
     return initListView( "sentinel.gas.list", [
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "hum", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.gas.hummidity) }, // SIC! humidity
-        { name: "pres", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.gas.pressure) },
-        { name: "alt", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.gas.altitude) },
+        { name: "gas", tip: "gas resistance [Ω]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.gas.gas },
+        { name: "hum", tip: "humidity [%]", width: "4.5rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.gas.humidity) },
+        { name: "pres", tip: "pressure [hPa]", width: "4.5rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.gas.pressure) },
+        { name: "alt", tip: "altitude [ft]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.gas.altitude) },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);
 }
 function initSentinelThermoView() {
     return initListView( "sentinel.thermo.list", [
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "temp", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.thermometer.temperature) },
+        { name: "temp", tip: "temperature [°C]", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.thermometer.temperature) },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);   
 }
 function initSentinelAnemoView() {
     return initListView( "sentinel.anemo.list", [
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "dir", tip: "wind direction [deg]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.anemometer.angle) },
+        { name: "dir", tip: "wind direction [°]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.anemometer.angle) },
         { name: "spd", tip: "wind speed [m/s]", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.anemometer.speed) },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);  
 }
 function initSentinelVocView() {
     return initListView( "sentinel.voc.list", [
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "tvoc", tip: "total volatile organic compounds [ppm]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.voc.TVOC) },
-        { name: "eCO₂", tip: "estimated CO₂ concentration [ppm]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.voc.eCO2) },
+        { name: "tvoc", tip: "total volatile organic compounds [ppb]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.voc.TVOC) },
+        { name: "eCO2", tip: "estimated CO₂ concentration [ppm]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.voc.eCO2) },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);   
 }
 function initSentinelAccelView() {
     return initListView( "sentinel.accel.list", [
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "ax", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.ax) },
-        { name: "ay", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.ay) },
-        { name: "az", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.az) },
+        { name: "ax", tip: "x-acceleration [m/s²]", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.ax) },
+        { name: "ay", tip: "y-acceleration [m/s²]",width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.ay) },
+        { name: "az", tip: "z-acceleration [m/s²]",width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_3.format(e.accelerometer.az) },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]); 
 }
 function initSentinelGpsView() {
     return initListView( "sentinel.gps.list", [
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "lat", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.latitude) },
-        { name: "lon", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.longitude) },
+        { name: "lat", tip: "latitude", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.latitude) },
+        { name: "lon", tip: "longitude", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.longitude) },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);  
 }
 function initSentinelImagesView() {
@@ -300,8 +296,19 @@ function initSentinelImagesView() {
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "type", tip: "ir: infrared, vis: visible", width: "2rem", attrs: [], map: e => e.image.isInfrared ? "ir" : "vis" },
         ui.listItemSpacerColumn(),
-        { name: "date", width: "12rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateTimeString(e.timeRecorded) }
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);
+}
+
+function initSentinelCmdList() {
+    let view = ui.getList("sentinel.diag.cmdList");
+    if (view) {
+        ui.setListItemDisplayColumns( view, ["fit"], [
+            { name: "template", tip: "name of command to instantiate", width: "26rem", attrs:[], map: e => e }
+        ]);
+
+        ui.setListItems(view, Array.from(diagnosticCommands.keys()));
+    }
 }
 
 function toggleShowImage(event) {
@@ -350,7 +357,7 @@ function handleWsSentinelMessages(msgType, msg) {
             handleSentinelUpdatesMessage(msg.sentinelUpdates);
             return true;
         case "cmdResponse":
-            ui.setField("sentinel.response", msg.cmdResponse);
+            logResponse(msg.cmdResponse);
         default:
             return false;
     }
@@ -386,12 +393,21 @@ function handleSentinelUpdatesMessage(sentinelUpdates) {
             }
             else if (r.smoke) updateSentinelReadings(e, 'smoke', r, sentinelSmokeView);
             else if (r.image) updateSentinelReadings(e, 'image', r, sentinelImageView);
-            else if (r.anemometer) updateSentinelReadings(e, 'anemometer', r, sentinelAnemoView);
-            else if (r.gas) updateSentinelReadings(e, 'gas', r, sentinelGasView);
+            else if (r.anemometer) {
+                updateSentinelReadings(e, 'anemometer', r, sentinelAnemoView);
+                updateDetails(e);
+            }
+            else if (r.gas) {
+                updateSentinelReadings(e, 'gas', r, sentinelGasView);
+                updateDetails(e);
+            }
             else if (r.voc) updateSentinelReadings(e, 'voc', r, sentinelVocView);
             else if (r.accelerometer) updateSentinelReadings(e, 'accelerometer', r, sentinelAccelView);
             else if (r.gps) updateSentinelReadings(e, 'gps', r, sentinelGpsView);
-            else if (r.thermometer) updateSentinelReadings(e, 'thermometer', r, sentinelThermoView);
+            else if (r.thermometer) {
+                updateSentinelReadings(e, 'thermometer', r, sentinelThermoView);
+                updateDetails(e);
+            }
         }
     });
 }
@@ -483,46 +499,50 @@ function createSymbolAsset(sentinelEntry) {
     return entity;
 }
 
-// TODO - this is a mockup
-function createDetailAsset(sentinelEntry) {
-    let sentinel = sentinelEntry.sentinel;
+
+function createDetailAsset (sentinelEntry) {
+    let cfg = config.sentinel;
 
     let entity = new Cesium.Entity({
-        id: sentinel.deviceId + "-details",
-        distanceDisplayCondition: config.sentinel.billboardDC,
+        id: sentinelEntry.id + "-info",
         position: sentinelEntry.position(),
-        ellipse: {
-            semiMinorAxis: 500,
-            semiMajorAxis: 1000,
-            rotation: Cesium.Math.toRadians(45),
-            material: Cesium.Color.ALICEBLUE.withAlpha(0.3),
-        },
-        show: false // only when selected
+        label: {
+            text: sentinelInfoText(sentinelEntry),
+            font: cfg.infoFont,
+            scale: 0.8,
+            horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+            verticalOrigin: Cesium.VerticalOrigin.TOP,
+            fillColor: cfg.color,
+            showBackground: true,
+            backgroundColor: cfg.labelBackground, // alpha does not work against model
+            outlineColor: cfg.color,
+            outlineWidth: 1,
+            pixelOffset: cfg.infoOffset,
+            distanceDisplayCondition: cfg.infoDC
+        }
     });
+
     sentinelDataSource.entities.add(entity);
     return entity;
 }
 
-// TODO - this is a mockup
-function createFireAsset(sentinelEntry) {
-    let sentinel = sentinelEntry.sentinel;
+function sentinelInfoText (se) {
+    //console.log(se);
+    let value = (v,f) => v ? f(v) : '-';
 
-    let entity = new Cesium.Entity({
-        id: sentinel.deviceId + "-fire",
-        distanceDisplayCondition: config.sentinel.billboardDC,
-        position: sentinelEntry.firePosition(),
-        ellipse: {
-            semiMinorAxis: 25,
-            semiMajorAxis: 50,
-            rotation: Cesium.Math.toRadians(-45),
-            material: Cesium.Color.RED.withAlpha(0.7),
-            outline: true,
-            outlineColor: Cesium.Color.RED
+    let temp = value(se.temperature(), (v)=>Math.round(v));
+    let humidity = value(se.humidity(), (v)=>Math.round(v));
+    let windDir = value(se.windDirection(), (v)=>Math.round(v));
+    let windSpd = value(se.windSpeed(), (v)=>util.f_1.format(v));
 
-        }
-    });
-    sentinelDataSource.entities.add(entity);
-    return entity;
+    return `${temp} °C\n${humidity} %\n${windDir} °\n${windSpd} m/s`
+}
+
+function updateDetails (se) {
+    if (se.assets.details){
+        se.assets.details.label.text = sentinelInfoText(se);
+        uiCesium.requestRender();
+    }
 }
 
 ui.exportToMain(function selectSentinel(event) {
@@ -531,6 +551,9 @@ ui.exportToMain(function selectSentinel(event) {
         selectedSentinelEntry = e;
         let sentinel = e.sentinel;
         setDataViews(sentinel);
+    } else {
+        selectedSentinelEntry = undefined;
+        clearDataViews();
     }
 });
 
@@ -541,6 +564,7 @@ ui.exportToMain(function zoomToSentinel(event) {
         if (se) {
             let pos = se.lastCartographic(config.sentinel.zoomHeight);
             uiCesium.zoomTo( Cesium.Cartographic.toCartesian(pos));
+            uiCesium.setSelectedEntity(se.assets.symbol);
         }
     }
 });
@@ -557,6 +581,18 @@ function setDataViews(sentinel) {
     ui.setListItems(sentinelGpsView, sentinel.gps);
 }
 
+function clearDataViews() {
+    ui.clearList(sentinelImageView);
+    ui.clearList(sentinelAccelView);
+    ui.clearList(sentinelAnemoView);
+    ui.clearList(sentinelThermoView);
+    ui.clearList(sentinelFireView);
+    ui.clearList(sentinelSmokeView);
+    ui.clearList(sentinelGasView);
+    ui.clearList(sentinelVocView);
+    ui.clearList(sentinelGpsView);
+}
+
 ui.exportToMain(function selectImage(event) {
     let e = event.detail.curSelection;
     if (e) {
@@ -568,18 +604,83 @@ ui.exportToMain(function selectImage(event) {
 
 //--- diagnostics
 
-ui.exportToMain(function uploadFireImage() {
-    if (selectedSentinelEntry) {
-        let cmd = {
-            event: "command",
-            data: {
-                action: "inject",
-                deviceIds: [ selectedSentinelEntry.id ]
-            }
-        };
-        ws.sendWsMessage(JSON.stringify(cmd));
+let diagnosticCommands = new Map([
+    ["upload fire image", uploadFireImageCmd], 
+    ["turn lights on", turnLightsOnCmd], 
+    ["turn lights off", turnLightsOffCmd]
+]);
 
+
+function uploadFireImageCmd() {
+    if (selectedSentinelEntry) {
+        return `{"event": "command",\n  "data":{ "action": "inject",\n   "deviceIds": ["${selectedSentinelEntry.id}"]}}`;
     } else {
-        alert("please select Sentinel");
+        alert("please select device");
+    }
+}
+
+function turnLightsOnCmd() {
+    if (selectedSentinelEntry) {
+        return `{"event": "command",\n  "data":{ "action": "switch",\n   "subject": "external-lights",\n  "state": "on",\n     "deviceIds": ["${selectedSentinelEntry.id}"]}}`;
+    } else {
+        alert("please select device");
+    }
+}
+
+function turnLightsOffCmd() {
+    if (selectedSentinelEntry) {
+        return `{"event": "command",\n  "data":{ "action": "switch",\n   "subject": "external-lights",\n  "state": "off",\n     "deviceIds": ["${selectedSentinelEntry.id}"]}}`;
+    } else {
+        alert("please select device");
+    }
+}
+
+ui.exportToMain(function selectSentinelCmd(event) {
+    let cmdDescr = ui.getSelectedListItem(event.target);
+
+    let cmdFunc = diagnosticCommands.get(cmdDescr);
+    if (cmdFunc) {
+        let cmd = cmdFunc();
+        if (cmd) {
+            ui.setTextAreaContent("sentinel.diag.cmd", cmd);
+        }
+    } else {
+        console.log("ignoring unknown command: ", cmdDescr);
     }
 });
+
+ui.exportToMain(function sendSentinelCmd() {
+    let cmd = ui.getTextAreaContent("sentinel.diag.cmd");
+    if (cmd){
+        try {
+            let o = JSON.parse(cmd);
+            let json = JSON.stringify(o);
+            console.log("sending command: ", json);
+            ws.sendWsMessage(json);
+
+        } catch (error) {
+            alert("malformed command: ", error);
+        }
+    }
+});
+
+ui.exportToMain(function clearSentinelHistory() {
+    ui.setTextAreaContent("sentinel.diag.log", null);
+});
+
+
+function logResponse (response) {
+    if (response) {
+        let logView = ui.getTextArea("sentinel.diag.log");
+        let text = ui.getTextAreaContent(logView);
+        let now = Date.now();
+
+        if (text) {
+            text = `${util.toLocalTimeString(now)} : ${response}\n${text}`;
+        } else {
+            text = `${util.toLocalTimeString(now)} : ${response}`;
+        }
+
+        ui.setTextAreaContent(logView, text);
+    }
+}

@@ -28,7 +28,8 @@ import java.io.InputStream
   * replay actor for Sentinel update archives, which are normal TaggedArchive (*.ta) files with JSON
   * payloads specifying Sentinel device states
   */
-class SentinelReplayActor (val config: Config) extends Replayer[TaggedArchiveReader]  {
+class SentinelReplayActor (val config: Config) extends Replayer {
+  type R = TaggedArchiveReader
 
   class SentinelReader (val iStream: InputStream, val pathName: String="<unknown>", val initBufferSize: Int)
                                                                      extends SentinelParser with TaggedArchiveReader {

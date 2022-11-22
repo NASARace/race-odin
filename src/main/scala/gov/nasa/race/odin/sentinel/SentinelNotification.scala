@@ -146,12 +146,16 @@ trait SentinelNotificationParser extends UTF8JsonPullParser {
     Some(SentinelActionNotification(action,result,deviceIds))
   }
 
+  /**
+   *
+   * {"event":"error","data":{"message":"Forbidden resource"}}
+   */
   def parseSentinelEventNotification(): Option[SentinelEventNotification] = {
     val event = quotedValue.intern
     var data: Option[String] = None
 
     foreachRemainingMember {
-      case DATA => data = Some(remainingDataAsString)
+      case DATA => data = Some(readTextOfCurrentLevel())
     }
 
     Some(SentinelEventNotification(event,data))

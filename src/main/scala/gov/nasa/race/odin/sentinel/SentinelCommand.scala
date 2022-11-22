@@ -26,6 +26,9 @@ import java.net.InetSocketAddress
 
 object SentinelCommand {
   val COMMAND = asc("command")
+  val SUBJECT = asc("subject")
+  val STATE = asc("state")
+  val SWITCH = asc("switch")
 }
 import SentinelCommand._
 
@@ -47,12 +50,18 @@ trait SentinelCommand extends JsonSerializable {
 }
 
 case class InjectCommand (deviceIds: Seq[String]) extends SentinelCommand {
-
   def serializeDataMembersTo(writer: JsonWriter): Unit = {
     writer.writeStringMember("action", "inject")
-    writer.writeArrayMember("deviceIds") { w=>
-      deviceIds.foreach(w.writeString)
-    }
+    writer.writeArrayMember("deviceIds") { w=> deviceIds.foreach(w.writeString) }
+  }
+}
+
+case class SwitchCommand (deviceIds: Seq[String], subject: String, state: String) extends SentinelCommand {
+  def serializeDataMembersTo(writer: JsonWriter): Unit = {
+    writer.writeStringMember("action", "switch")
+    writer.writeStringMember("subject", subject)
+    writer.writeStringMember("state", state)
+    writer.writeArrayMember("deviceIds") { w=> deviceIds.foreach(w.writeString) }
   }
 }
 
@@ -67,8 +76,10 @@ case class SentinelCommandResponse (remoteAddress: InetSocketAddress, response: 
 trait SentinelCommandParser extends UTF8JsonPullParser {
 
   def parseSentinelCommand(): Option[SentinelCommand] = {
-    var action = utf8("")
+    var action = utf8("") // used as a match var
     var deviceIds = Seq.empty[String]
+    var subject = ""
+    var state = ""
 
     ensureNextIsObjectStart()
     foreachMemberInCurrentObject {
@@ -78,6 +89,9 @@ trait SentinelCommandParser extends UTF8JsonPullParser {
           foreachMemberInCurrentObject {
             case ACTION => action = quotedValue.constCopy
             case DEVICE_IDS => deviceIds = readCurrentStringArray()
+
+            case STATE => state = quotedValue.toString()
+            case SUBJECT => subject = quotedValue.toString()
           }
         } else return None // shortcut
 
@@ -86,6 +100,7 @@ trait SentinelCommandParser extends UTF8JsonPullParser {
 
     action match {
       case INJECT => if (deviceIds.nonEmpty) Some(InjectCommand(deviceIds)) else None
+      case SWITCH  => if (deviceIds.nonEmpty && subject.nonEmpty && state.nonEmpty) Some(SwitchCommand(deviceIds,subject,state)) else None
       case _ => None // unsupported command
     }
   }

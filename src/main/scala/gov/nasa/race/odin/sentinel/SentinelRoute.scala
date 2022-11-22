@@ -31,7 +31,7 @@ import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute, HttpServer, PushWS
 import gov.nasa.race.cesium.CesiumRoute
 import gov.nasa.race.ifSome
 import gov.nasa.race.odin.sentinel.SentinelSensorReading.{DefaultImageDir, IMAGE_PREFIX}
-import gov.nasa.race.ui.{extModule, uiButton, uiColumnContainer, uiField, uiFieldGroup, uiIcon, uiList, uiNumField, uiPanel, uiRowContainer, uiTab, uiTabbedContainer, uiWindow}
+import gov.nasa.race.ui._
 import gov.nasa.race.util.FileUtils
 import scalatags.Text
 
@@ -126,6 +126,9 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
   pointOutlineColor: ${cesiumColor(cfg,"point-outline-color", "black")},
   pointOutlineWidth: ${cfg.getIntOrElse("point-outline-width", 1)},
   pointDC: new Cesium.DistanceDisplayCondition( $pointDist, Number.MAX_VALUE),
+  infoFont: '${cfg.getStringOrElse("info-font", "14px monospace")}',
+  infoOffset:  new Cesium.Cartesian2( $labelOffsetX, ${labelOffsetY + 16}),
+  infoDC: new Cesium.DistanceDisplayCondition( 0, ${cfg.getIntOrElse("info-dist", 70000)}),
   billboardDC: new Cesium.DistanceDisplayCondition( 0, $pointDist),
   imageWidth: ${cfg.getIntOrElse("img-width", 400)},
   maxHistory: ${cfg.getIntOrElse("max-history", 10)},
@@ -156,9 +159,16 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
         )
       ),
       uiPanel("diagnostics", false)(
+        uiList("sentinel.diag.cmdList", maxRows=6, "main.selectSentinelCmd(event)"),
         uiColumnContainer()(
-          uiButton("upload fire image", "main.uploadFireImage()", 10),
-          uiField("response", "sentinel.response", true, "25rem")
+          uiTextArea( "sentinel.diag.cmd", isFixed=true, visCols=44, visRows=4 )
+        ),
+        uiRowContainer()(
+          uiButton("send", "main.sendSentinelCmd()"),
+          uiButton("clear history", "main.clearSentinelHistory()")
+        ),
+        uiColumnContainer()(
+          uiTextArea( "sentinel.diag.log", isReadOnly=true, isFixed=true, visCols=44, visRows=4 ),
         )
       )
     )
@@ -234,7 +244,8 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
     // we parse here to check for malformed cmd requests before we send them to other actors
     withStrictMessageData(m) { data=>
       if (sentinelCmdParser.initialize(data)) {
-        ifSome(sentinelCmdParser.parseSentinelCommand()){ cmd =>
+        val parseResult = sentinelCmdParser.parseSentinelCommand()
+        ifSome(parseResult){ cmd =>
           publishData( SentinelCommandRequest( actorRef, ctx.remoteAddress, cmd, true))
         }
       }
