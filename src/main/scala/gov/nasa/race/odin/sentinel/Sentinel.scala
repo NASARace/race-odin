@@ -156,7 +156,7 @@ class SentinelParser extends UTF8JsonPullParser
     Thread.dumpStack()
     new JsonParseException(msg)
   }
-   */
+  */
 
   def parseRecords(): Seq[SentinelSensorReading] = {
     val updates = ArrayBuffer.empty[SentinelSensorReading]

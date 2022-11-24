@@ -17,7 +17,7 @@
 package gov.nasa.race.odin
 
 import com.typesafe.config.Config
-import gov.nasa.race.cesium.{CesiumBldgRoute, CesiumGpsRoute, CesiumHotspotRoute, CesiumLayerRoute, CesiumTrackRoute, CesiumWindRoute}
+import gov.nasa.race.cesium.{CesiumBldgRoute, CesiumGoesrRoute, CesiumGpsRoute, CesiumHotspotRoute, CesiumJpssRoute, CesiumLayerRoute, CesiumTrackRoute, CesiumWindRoute, GeoLayerRoute, ImageryLayerRoute}
 import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http.DocumentRoute
 import gov.nasa.race.ui.UiSettingsRoute
@@ -27,11 +27,13 @@ import gov.nasa.race.odin.sentinel.SentinelRoute
  * the aggregation of micro-services we provide under the configured URL
  */
 class DemoApp(val parent: ParentActor, val config: Config)
-         extends DocumentRoute // the document (HTML + config.js) creator
+         extends DocumentRoute
            with UiSettingsRoute
-           with CesiumBldgRoute // a route that includes OSMBuildings support
-           with CesiumTrackRoute // a route that tracks aircraft/drones
-           with CesiumLayerRoute  // a route that contains configured, user-selectable display layers (KML, GeoJSON etc.)
-           with CesiumWindRoute  // a route that can display wind fields
-           with CesiumHotspotRoute // a route that can display satellite fire detection
-           with SentinelRoute // a route that can display Sentinel sensor state
+           with CesiumBldgRoute
+           with ImageryLayerRoute
+           with GeoLayerRoute
+           with CesiumWindRoute
+           with CesiumGoesrRoute
+           with CesiumJpssRoute
+           with SentinelRoute
+           with CesiumTrackRoute
