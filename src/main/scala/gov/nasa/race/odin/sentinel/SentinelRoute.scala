@@ -128,7 +128,7 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
   pointDC: new Cesium.DistanceDisplayCondition( $pointDist, Number.MAX_VALUE),
   infoFont: '${cfg.getStringOrElse("info-font", "14px monospace")}',
   infoOffset:  new Cesium.Cartesian2( $labelOffsetX, ${labelOffsetY + 16}),
-  infoDC: new Cesium.DistanceDisplayCondition( 0, ${cfg.getIntOrElse("info-dist", 70000)}),
+  infoDC: new Cesium.DistanceDisplayCondition( 0, ${cfg.getIntOrElse("info-dist", 40000)}),
   billboardDC: new Cesium.DistanceDisplayCondition( 0, $pointDist),
   imageWidth: ${cfg.getIntOrElse("img-width", 400)},
   maxHistory: ${cfg.getIntOrElse("max-history", 10)},
