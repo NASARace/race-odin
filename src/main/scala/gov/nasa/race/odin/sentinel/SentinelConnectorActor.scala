@@ -146,17 +146,24 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
 
   // websocket messages received from Sentinel server
   def handleSentinelNotification (data: Array[Byte]): Unit = {
-    debug(s"received notification '${new String(data)}'")
+    info(s"received notification '${new String(data)}'")
+
     if (parser.initialize(data)) {
       parser.parseNotification() match {
         case Some(sn) =>
           sn match {
             case n: SentinelJoinNotification => info(s"""joined sentinel notification for devices: ${n.deviceIds.mkString(",")}""")
             case n: SentinelRecordNotification => requestUpdateRecord( n.devideId, n.sensorNo, n.sensorCapability)
+            case n: SentinelErrorNotification => warning(s"received error notification: '${n.message}'")
 
+            case n: TriggerAlertNotification => processCommandResponse(n,data)
+            case n: SwitchLightsNotification => processCommandResponse(n,data)
+
+            // TODO those seem obsolete by now
             case n: SentinelReceivedNotification => //processCommandResponse(n, data)
             case n: SentinelActionNotification => processCommandResponse(n, data)
-            case n: SentinelEventNotification => processSentinelEvent(n)
+
+            case other => warning(s"ignoring unknown notification $other")
           }
 
         case None => warning(s"ignoring malformed sensor notification: ${new String(data)}")
@@ -231,7 +238,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
   }
 
   def registerForDeviceUpdates(deviceId: String): Unit = {
-    val msg = s"""{"event":"join", "data":{"deviceIds":["$deviceId"]}}"""
+    val msg = s"""{"event":"join", "data":{"deviceIds":["$deviceId"],"messageId":"${SentinelCommand.newMsgId()}"}}"""
     info(s"sending join message: $msg")
     processOutgoingMessage(msg)
   }

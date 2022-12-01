@@ -245,8 +245,9 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
     withStrictMessageData(m) { data=>
       if (sentinelCmdParser.initialize(data)) {
         val parseResult = sentinelCmdParser.parseSentinelCommand()
-        ifSome(parseResult){ cmd =>
-          publishData( SentinelCommandRequest( actorRef, ctx.remoteAddress, cmd, true))
+        parseResult match {
+          case Some(cmd) => publishData( SentinelCommandRequest( actorRef, ctx.remoteAddress, cmd, true))
+          case None => warning(s"ignoring malformed command: '${sentinelCmdParser.dataAsString}'")
         }
       }
     }

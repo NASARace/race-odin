@@ -45,9 +45,8 @@ object Sentinel {
   val CLAIMS = asc("claims")
   val EVIDENCE = asc("evidences")
   val EVENT = asc("event")
-  val ACTION = asc("action")
-  val INJECT = asc("inject")
   val DEVICE_IDS = asc("deviceIds")
+  val MESSAGE_ID = asc("messageId")
 
   val MaxReadings = 10  // TODO - do we need per-sensor type limits and should it be configurable?
 }

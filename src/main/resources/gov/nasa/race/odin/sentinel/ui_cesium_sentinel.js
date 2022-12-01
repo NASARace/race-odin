@@ -605,34 +605,22 @@ ui.exportToMain(function selectImage(event) {
 //--- diagnostics
 
 let diagnosticCommands = new Map([
-    ["upload fire image", uploadFireImageCmd], 
+    ["trigger alert", triggerAlertCmd], 
     ["turn lights on", turnLightsOnCmd], 
-    ["turn lights off", turnLightsOffCmd]
+    ["turn lights off", turnLightsOffCmd],
+
 ]);
 
-
-function uploadFireImageCmd() {
-    if (selectedSentinelEntry) {
-        return `{"event": "command",\n  "data":{ "action": "inject",\n   "deviceIds": ["${selectedSentinelEntry.id}"]}}`;
-    } else {
-        alert("please select device");
-    }
+function triggerAlertCmd() {
+    return `{"event": "trigger-alert",\n  "data":{ "deviceIds": ["DEVICE"]}}`;
 }
 
 function turnLightsOnCmd() {
-    if (selectedSentinelEntry) {
-        return `{"event": "command",\n  "data":{ "action": "switch",\n   "subject": "external-lights",\n  "state": "on",\n     "deviceIds": ["${selectedSentinelEntry.id}"]}}`;
-    } else {
-        alert("please select device");
-    }
+    return `{"event": "switch-lights",\n  "data":{ "type": "external-lights",\n  "state": "on",\n     "deviceIds": ["DEVICE"]}}`;
 }
 
 function turnLightsOffCmd() {
-    if (selectedSentinelEntry) {
-        return `{"event": "command",\n  "data":{ "action": "switch",\n   "subject": "external-lights",\n  "state": "off",\n     "deviceIds": ["${selectedSentinelEntry.id}"]}}`;
-    } else {
-        alert("please select device");
-    }
+    return `{"event": "switch-lights",\n  "data":{ "subject": "external-lights",\n  "state": "off",\n     "deviceIds": ["DEVICE"]}}`;
 }
 
 ui.exportToMain(function selectSentinelCmd(event) {
@@ -652,6 +640,14 @@ ui.exportToMain(function selectSentinelCmd(event) {
 ui.exportToMain(function sendSentinelCmd() {
     let cmd = ui.getTextAreaContent("sentinel.diag.cmd");
     if (cmd){
+        if (cmd.includes("DEVICE")) {
+            if (!selectedSentinelEntry) {
+                alert("please select device before sending command");
+                return;
+            }
+            cmd = cmd.replace("DEVICE", selectedSentinelEntry.id);
+        }
+
         try {
             let o = JSON.parse(cmd);
             let json = JSON.stringify(o);

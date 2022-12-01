@@ -18,16 +18,20 @@ package gov.nasa.race.odin.sentinel
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.UTF8JsonPullParser
-import gov.nasa.race.odin.sentinel.Sentinel.{DATA, DEVICE_ID, DEVICE_IDS, SENSOR_NO, SENSOR_TYPE}
+import gov.nasa.race.odin.sentinel.Sentinel.{DATA, DEVICE_ID, DEVICE_IDS, MESSAGE_ID, SENSOR_NO, SENSOR_TYPE}
+import gov.nasa.race.odin.sentinel.SentinelCommand.{STATE, TRIGGER_ALERT}
 
 object SentinelNotification {
-  val JOINED = asc("joined")
-  val NEW_RECORD = asc("NewRecord")
+  val JOIN = asc("join")
+  val RECORD = asc("record")
   val RECEIVED = asc("received")
   val ACTION = asc("action")
   val RESULT = asc("result")
   val SUCCESS = asc("success")
   val EVENT = asc("event")
+  val ERROR = asc("error")
+  val TYPE = asc("type")
+  val MESSAGE = asc("message")
 }
 import SentinelNotification._
 
@@ -39,12 +43,17 @@ trait SentinelNotification
 /**
  * notification about successful join for device/sensor update notifications
  */
-case class SentinelJoinNotification (deviceIds: Seq[String]) extends SentinelNotification
+case class SentinelJoinNotification (deviceIds: Seq[String], msgId: String) extends SentinelNotification
 
 /**
  * notification that there is a new sensor record available
  */
 case class SentinelRecordNotification (devideId: String, sensorNo: Int, sensorCapability: String) extends SentinelNotification
+
+/**
+ * error reported by the sentinel server
+ */
+case class SentinelErrorNotification (message: String) extends SentinelNotification
 
 /**
  * TODO - check if this is just a failed command response
@@ -56,9 +65,18 @@ case class SentinelReceivedNotification (deviceIds: Seq[String]) extends Sentine
  */
 case class SentinelActionNotification (action: String, success: Boolean, deviceIds: Seq[String]) extends SentinelNotification
 
+/**
+ * response to a TriggerAlertCommand
+ */
+case class TriggerAlertNotification (deviceId: String, msgId: String, result: String) extends SentinelNotification
 
 /**
- * a rempte server event that is not a response (error messages etc)
+ * response to a SwitchLightsCommand
+ */
+case class SwitchLightsNotification (deviceId: String, msgId: String, subject: String, state: String) extends SentinelNotification
+
+/**
+ * a remote server event that is not a response (error messages etc)
  */
 case class SentinelEventNotification (event: String, details: Option[String]) extends SentinelNotification
 
@@ -66,54 +84,121 @@ case class SentinelEventNotification (event: String, details: Option[String]) ex
  * JSON parsing support for SentinelNotifications
  */
 trait SentinelNotificationParser extends UTF8JsonPullParser {
-  /**
-   * parse sensor record notification messages (received through websocket). The following message types are supported:
-   *
-   * { "joined":["dizwqq96w36j"] }
-   * { "NewRecord":{"deviceId":"dizwqq96w36j", "sensorNo":0, "type":"magnetometer"}}
-   *
-   * TODO - this should use regular syntax
-   */
+
   def parseNotification(): Option[SentinelNotification] = {
     ensureNextIsObjectStart()
     foreachMemberInCurrentObject {
-      case JOINED => return parseSentinelJoinNotification()
-      case NEW_RECORD => return parseSentinelRecordNotification()
-      case RECEIVED => return parseSentinelReceivedNotification()
-      case ACTION => return parseSentinelActionNotification()
-      case EVENT => return parseSentinelEventNotification()
-      case other => warning(s"ignore unknown notification '$other'");
+      case EVENT => value match {
+        case JOIN => return parseJoinEvent()
+        case RECORD => return parseRecordEvent()
+        case ERROR => return parseErrorEvent()
+        case TRIGGER_ALERT => return parseTriggerAlertEvent()
+        case other => warning(s"unknown event type '$other'")
+      }
+      case other => warning(s"unknown message '$other'")
     }
     None
   }
 
-  /**
-   * notification that we successfully subscribed to newRecord notification for devices
-   * {"joined":["roo7gd1dldn3"]}
-   */
-  def parseSentinelJoinNotification(): Option[SentinelJoinNotification] = {
-    val devIds = readCurrentStringArray()
-    if (devIds.nonEmpty) Some(SentinelJoinNotification(devIds)) else None
-  }
+  def parseJoinEvent(): Option[SentinelJoinNotification] = {
+    var res: Option[SentinelJoinNotification] = None
+    foreachRemainingMember {
+      case DATA =>
+        var deviceIds = Seq.empty[String]
+        var msgId = ""
 
+        foreachMemberInCurrentObject {
+          case DEVICE_IDS => deviceIds = readCurrentStringArray()
+          case MESSAGE_ID => msgId = quotedValue.intern
+        }
+        res = Option.when(deviceIds.nonEmpty && !msgId.isEmpty)( SentinelJoinNotification(deviceIds, msgId))
 
-  /**
-   * notification about availability of new record:
-   * {"NewRecord":{"deviceId":"roo7gd1dldn3","sensorNo":15,"type":"voc"}}
-   */
-  def parseSentinelRecordNotification(): Option[SentinelRecordNotification] = {
-    var deviceId: String = null
-    var sensorNo: Int = -1
-    var sensorType: String = null
-
-    foreachMemberInCurrentObject {
-      case DEVICE_ID => deviceId = quotedValue.intern
-      case SENSOR_NO => sensorNo = unQuotedValue.toInt
-      case SENSOR_TYPE => sensorType = quotedValue.intern
+      case _ =>
     }
-
-    if (deviceId != null && sensorNo >= 0 && sensorType != null) Some(SentinelRecordNotification(deviceId,sensorNo,sensorType)) else None
+    res
   }
+
+  def parseRecordEvent(): Option[SentinelRecordNotification] = {
+    var res: Option[SentinelRecordNotification] = None
+    foreachRemainingMember {
+      case DATA =>
+        var deviceId = ""
+        var sensorNo = -1
+        var recType = ""
+
+        foreachMemberInCurrentObject {
+          case DEVICE_ID => deviceId = quotedValue.intern
+          case SENSOR_NO => sensorNo = unQuotedValue.toInt
+          case TYPE => recType = quotedValue.intern
+          case _ => // ignore
+        }
+        res = Option.when(!deviceId.isEmpty && sensorNo >= 0 && !recType.isEmpty)( SentinelRecordNotification(deviceId, sensorNo, recType))
+
+      case _ =>
+    }
+    res
+  }
+
+  def parseErrorEvent(): Option[SentinelErrorNotification] = {
+    var res: Option[SentinelErrorNotification] = None
+    foreachRemainingMember {
+      case DATA =>
+        var msg = ""
+        foreachMemberInCurrentObject {
+          case MESSAGE => msg = quotedValue.toString()
+          case _ => // ignore
+        }
+        res = Option.when(!msg.isEmpty)( SentinelErrorNotification(msg))
+      case _ =>
+    }
+    res
+  }
+
+  def parseTriggerAlertEvent(): Option[TriggerAlertNotification] = {
+    var res: Option[TriggerAlertNotification] = None
+    foreachRemainingMember {
+      case DATA =>
+        var deviceId = ""
+        var msgId = ""
+        var result = ""
+
+        foreachMemberInCurrentObject {
+          case DEVICE_ID => deviceId = quotedValue.intern
+          case MESSAGE_ID => msgId = quotedValue.toString()
+          case RESULT => result = quotedValue.toString()
+          case _ => // ignore
+        }
+        res = Option.when(!deviceId.isEmpty /*&& !msgId.isEmpty */ && !result.isEmpty)( TriggerAlertNotification(deviceId, msgId, result))
+      case _ =>
+    }
+    res
+  }
+
+
+  def parseSwitchLightsEvent(): Option[SwitchLightsNotification] = {
+    var res: Option[SwitchLightsNotification] = None
+    foreachRemainingMember {
+      case DATA =>
+        var deviceId = ""
+        var msgId = ""
+        var subject = ""
+        var state = ""
+
+        foreachMemberInCurrentObject {
+          case DEVICE_ID => deviceId = quotedValue.intern
+          case MESSAGE_ID => msgId = quotedValue.toString()
+          case STATE => quotedValue.intern
+          case TYPE => quotedValue.intern
+          case _ => // ignore
+        }
+        res = Option.when(!deviceId.isEmpty && !msgId.isEmpty && !subject.isEmpty && !state.isEmpty){
+          SwitchLightsNotification(deviceId, msgId, subject, state)
+        }
+      case _ =>
+    }
+    res
+  }
+
 
   /**
    *  TODO - not clear what the purpose is. Does it always precede an action response ?
@@ -151,6 +236,11 @@ trait SentinelNotificationParser extends UTF8JsonPullParser {
    * {"event":"error","data":{"message":"Forbidden resource"}}
    */
   def parseSentinelEventNotification(): Option[SentinelEventNotification] = {
+    quotedValue match {
+      case RECORD =>
+
+    }
+
     val event = quotedValue.intern
     var data: Option[String] = None
 

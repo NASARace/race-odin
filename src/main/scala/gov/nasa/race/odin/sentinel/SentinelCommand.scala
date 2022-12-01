@@ -18,17 +18,24 @@ package gov.nasa.race.odin.sentinel
 
 import akka.actor.ActorRef
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.ConstUtf8Slice.utf8
 import gov.nasa.race.common.{JsonSerializable, JsonWriter, UTF8JsonPullParser}
-import gov.nasa.race.odin.sentinel.Sentinel.{ACTION, DATA, DEVICE_IDS, EVENT, INJECT}
+import gov.nasa.race.odin.sentinel.Sentinel.{DATA, DEVICE_IDS, EVENT, MESSAGE_ID}
 
 import java.net.InetSocketAddress
 
 object SentinelCommand {
-  val COMMAND = asc("command")
-  val SUBJECT = asc("subject")
   val STATE = asc("state")
-  val SWITCH = asc("switch")
+  val TYPE = asc("type")
+  val TRIGGER_ALERT = asc("trigger-alert")
+  val SWITCH_VALVE = asc("switch-valve")
+  val SWITCH_LIGHTS = asc("switch-lights")
+
+  var nMsgs = 0
+
+  def newMsgId(): String = synchronized {
+    nMsgs += 1
+    s"MSG-$nMsgs"
+  }
 }
 import SentinelCommand._
 
@@ -36,11 +43,11 @@ import SentinelCommand._
  * a command we send to the Delphire server through the websocket . Note this needs to be extensible
  */
 trait SentinelCommand extends JsonSerializable {
-
-  def requestId: String = "" // TODO - we need this to properly route responses back to the originators
+  val event: String
+  val msgId: String
 
   override def serializeMembersTo(writer: JsonWriter): Unit = {
-    writer.writeStringMember("event", "command")
+    writer.writeStringMember("event", event)
     writer.writeObjectMember("data") { w=>
       serializeDataMembersTo(w)
     }
@@ -49,22 +56,35 @@ trait SentinelCommand extends JsonSerializable {
   def serializeDataMembersTo(writer: JsonWriter): Unit
 }
 
-case class InjectCommand (deviceIds: Seq[String]) extends SentinelCommand {
+case class TriggerAlertCommand(msgId: String, deviceIds: Seq[String]) extends SentinelCommand {
+  val event = TRIGGER_ALERT.toString()
+
   def serializeDataMembersTo(writer: JsonWriter): Unit = {
-    writer.writeStringMember("action", "inject")
     writer.writeArrayMember("deviceIds") { w=> deviceIds.foreach(w.writeString) }
+    writer.writeStringMember( MESSAGE_ID, msgId)
   }
 }
 
-case class SwitchCommand (deviceIds: Seq[String], subject: String, state: String) extends SentinelCommand {
+case class SwitchLightsCommand(msgId: String, deviceIds: Seq[String], subject: String, state: String) extends SentinelCommand {
+  val event = SWITCH_LIGHTS.toString()
+
   def serializeDataMembersTo(writer: JsonWriter): Unit = {
-    writer.writeStringMember("action", "switch")
-    writer.writeStringMember("subject", subject)
+    writer.writeStringMember("type", subject)
     writer.writeStringMember("state", state)
     writer.writeArrayMember("deviceIds") { w=> deviceIds.foreach(w.writeString) }
+    writer.writeStringMember( MESSAGE_ID, msgId)
   }
 }
 
+case class SwitchValveCommand(msgId: String, deviceIds: Seq[String], state: String) extends SentinelCommand {
+  val event = SWITCH_VALVE.toString()
+
+  def serializeDataMembersTo(writer: JsonWriter): Unit = {
+    writer.writeStringMember("state", state)
+    writer.writeArrayMember("deviceIds") { w=> deviceIds.foreach(w.writeString) }
+    writer.writeStringMember( MESSAGE_ID, msgId)
+  }
+}
 
 //---wrappers that associates the requesting client with the command/response
 case class SentinelCommandRequest (sender: ActorRef, remoteAddress: InetSocketAddress, cmd: SentinelCommand, requestText: Boolean)
@@ -76,32 +96,60 @@ case class SentinelCommandResponse (remoteAddress: InetSocketAddress, response: 
 trait SentinelCommandParser extends UTF8JsonPullParser {
 
   def parseSentinelCommand(): Option[SentinelCommand] = {
-    var action = utf8("") // used as a match var
-    var deviceIds = Seq.empty[String]
-    var subject = ""
-    var state = ""
+    var res: Option[SentinelCommand] = None
 
     ensureNextIsObjectStart()
     foreachMemberInCurrentObject {
-      case EVENT => if (value != COMMAND) return None // shortcut
-      case DATA =>
-        if (isInObject) {
-          foreachMemberInCurrentObject {
-            case ACTION => action = quotedValue.constCopy
-            case DEVICE_IDS => deviceIds = readCurrentStringArray()
-
-            case STATE => state = quotedValue.toString()
-            case SUBJECT => subject = quotedValue.toString()
-          }
-        } else return None // shortcut
+      case EVENT => quotedValue match {
+        case TRIGGER_ALERT => res = parseTriggerAlert()
+        case SWITCH_LIGHTS => res = parseSwitchLights()
+        //... more to follow
+      }
 
       case _ => // ignore
     }
+    res
+  }
 
-    action match {
-      case INJECT => if (deviceIds.nonEmpty) Some(InjectCommand(deviceIds)) else None
-      case SWITCH  => if (deviceIds.nonEmpty && subject.nonEmpty && state.nonEmpty) Some(SwitchCommand(deviceIds,subject,state)) else None
-      case _ => None // unsupported command
+  def parseTriggerAlert(): Option[TriggerAlertCommand] = {
+    var res: Option[TriggerAlertCommand] = None
+    foreachRemainingMember {
+      case DATA =>
+        var deviceIds = Seq.empty[String]
+        var msgId = ""
+
+        foreachMemberInCurrentObject {
+          case DEVICE_IDS => deviceIds = readCurrentStringArray()
+          case MESSAGE_ID => msgId = quotedValue.intern
+        }
+        if (msgId.isEmpty) msgId = newMsgId()
+        res = Option.when(deviceIds.nonEmpty && !msgId.isEmpty)( TriggerAlertCommand(msgId, deviceIds))
+
+      case _ =>
     }
+    res
+  }
+
+  def parseSwitchLights(): Option[SwitchLightsCommand] = {
+    var res: Option[SwitchLightsCommand] = None
+    foreachRemainingMember {
+      case DATA =>
+        var deviceIds = Seq.empty[String]
+        var msgId = ""
+        var subject = ""
+        var state = ""
+
+        foreachMemberInCurrentObject {
+          case DEVICE_IDS => deviceIds = readCurrentStringArray()
+          case MESSAGE_ID => msgId = quotedValue.intern
+          case TYPE => subject = quotedValue.intern
+          case STATE => state = quotedValue.intern
+        }
+        if (msgId.isEmpty) msgId = newMsgId()
+        res = Option.when(deviceIds.nonEmpty && !msgId.isEmpty)( SwitchLightsCommand(msgId, deviceIds, subject, state))
+
+      case _ =>
+    }
+    res
   }
 }
