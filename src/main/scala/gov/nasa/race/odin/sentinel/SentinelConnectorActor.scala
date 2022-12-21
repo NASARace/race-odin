@@ -27,7 +27,7 @@ import gov.nasa.race.core.{BusEvent, PeriodicRaceActor, PublishingRaceActor, Sub
 import gov.nasa.race.http.{HttpActor, SyncWSAdapterActor, WsConnectRequest}
 import gov.nasa.race.{ifInstanceOf, ifSome, ifTrueSome}
 import gov.nasa.race.odin.sentinel.SentinelSensorReading.{DefaultImageDir, IMAGE_PREFIX}
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.uom.{DateTime, Time}
 import gov.nasa.race.uom.Time.Seconds
 import gov.nasa.race.util.FileUtils
 
@@ -41,7 +41,8 @@ import scala.util.{Success, Failure => FailureEx}
 /**
  * actor for realtime (bi-directional) communication with Delphire Sentinel fire sensors
  */
-class SentinelConnectorActor(val config: Config) extends PublishingRaceActor with SubscribingRaceActor with HttpActor with SyncWSAdapterActor with PeriodicRaceActor  {
+class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
+                       with SubscribingRaceActor with HttpActor with SyncWSAdapterActor with PeriodicRaceActor  {
 
   // not thread-safe, access only from actor thread
   class DeviceEntry (val deviceInfo: SentinelDeviceInfo) {
@@ -59,15 +60,17 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
   private val requestHdrs = Seq(Authorization(OAuth2BearerToken(config.getVaultString("delphire.access-token"))))
   private val wsUri = s"ws://$delphireHost"
 
-  // if those are set we fall back to polling if websocket connection is lost and can't be re-established
-  val usePolling = config.getBooleanOrElse("use-polling", true)
+  // heartbeats - we periodically check if the websocket is open. If not, we try to re-open it and poll the latest
+  // sentinel readings as a fallback
+  override val TickIntervalKey: String = "heartbeat-interval"
   override def defaultTickInterval: FiniteDuration = 60.seconds
+  val reconnectDelay: FiniteDuration = config.getFiniteDurationOrElse("reconnect-delay", 5.seconds)
 
   // websocket connection parameters
   val connectTimeout = config.getFiniteDurationOrElse("connect-timeout", 10.seconds)
   var nFailedConnects = 0 // number of consecutive connection timeouts/failures
-  val maxFailedConnects = config.getIntOrElse("max-failed-connects", 5)
-  val reconnectInterval: FiniteDuration = config.getFiniteDurationOrElse("reconnect-interval", 30.seconds)
+  val maxFailedConnects = config.getIntOrElse("max-failed-connects", 100)
+  var nSuccessfulConnects = 0
 
   val maxHistory = config.getIntOrElse("max-history", 5) // number of recent readings. do we need that per-sensor?
   val imageDir = FileUtils.ensureWritableDir(config.getStringOrElse("image-dir", DefaultImageDir)).get
@@ -78,7 +81,6 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
   val devices: mutable.Map[String,DeviceEntry] = mutable.Map.empty
   var lastUpdate: DateTime = DateTime.UndefinedDateTime
 
-  var isPolling: Boolean = false
 
   //--- RaceActor interface
   override def handleMessage: Receive = handleSentinelRaceMessage.orElse( handleWsMessage)
@@ -90,9 +92,17 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
     }
   }
 
-  //--- PeriodicRaceActor interface (in case we are either configured or have to fall back to polling)
+  //--- PeriodicRaceActor interface (heartbeats)
+
   override def onRaceTick(): Unit = {
-    if (isPolling) pollDevices()
+    if (isConnected) {
+      sendPing() // through websocket
+
+    } else { // get latest data and try to (re)connect websocket
+      pollDevices()
+      if (nSuccessfulConnects > 0) tryReConnect(wsUri) // only try reconnect if we previously had a connection
+    }
+
     super.onRaceTick()
   }
 
@@ -111,6 +121,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
   override def onConnect(): Unit = {
     info(s"connected to $wsUri")
     devices.foreach( e=> registerForDeviceUpdates(e._1)) // note we only connect after we already got devices
+    nSuccessfulConnects += 1
   }
   override def onConnectFailed (uri: String, cause: String): Unit = {
     warning(s"connecting to web socket $uri failed with $cause")
@@ -129,16 +140,10 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
   def tryReConnect(uri: String): Unit = {
     nFailedConnects += 1
     if (nFailedConnects < maxFailedConnects) {
-      info(s"scheduling reconnect to $uri in $reconnectInterval, remaining attempts: ${maxFailedConnects - nFailedConnects}")
-      scheduleOnce(reconnectInterval, WsConnectRequest(uri,connectTimeout))
-    } else {
-      if (usePolling) {
-        warning(s"max connection attempts to $uri exceeded, falling back to polling")
-        isPolling = true
-        startScheduler
-      } else {
-        warning(s"max connection attempts to $uri exceeded, data acquisition terminated.")
-      }
+      info(s"scheduling reconnect to $uri in $reconnectDelay, remaining attempts: ${maxFailedConnects - nFailedConnects}")
+      scheduleOnce(reconnectDelay, WsConnectRequest(uri,connectTimeout))
+    } else if (nFailedConnects == maxFailedConnects) {
+        warning(s"max connection attempts to notification websocket $uri exceeded, falling back to polling.")
     }
   }
 
@@ -152,16 +157,14 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
       parser.parseNotification() match {
         case Some(sn) =>
           sn match {
+            case n: SentinelPongNotification => processPongResponse(n)
+
             case n: SentinelJoinNotification => info(s"""joined sentinel notification for devices: ${n.deviceIds.mkString(",")}""")
             case n: SentinelRecordNotification => requestUpdateRecord( n.devideId, n.sensorNo, n.sensorCapability)
             case n: SentinelErrorNotification => warning(s"received error notification: '${n.message}'")
 
             case n: TriggerAlertNotification => processCommandResponse(n,data)
             case n: SwitchLightsNotification => processCommandResponse(n,data)
-
-            // TODO those seem obsolete by now
-            case n: SentinelReceivedNotification => //processCommandResponse(n, data)
-            case n: SentinelActionNotification => processCommandResponse(n, data)
 
             case other => warning(s"ignoring unknown notification $other")
           }
@@ -219,6 +222,10 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
     }
   }
 
+  override def isReadyToSchedule: Boolean = {
+    devices.exists( e=> e._2.sensors.nonEmpty) // we can schedule checks once we have acquired devices with sensors
+  }
+
   def processSensors(msg: SensorResponse): Unit = {
     if (parser.initialize(msg.data)) {
       val sensorInfos = parser.parseSensors()
@@ -231,6 +238,8 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
               requestInitialRecords(deviceId, si.sensorNo, capEntry._1.toString)
             }
           }
+
+          startScheduler // we are ready to poll (and check websocket connection)
 
         case None => warning(s"ignoring sensor info for unknown device: ${msg.deviceId}")
       }
@@ -266,7 +275,6 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
       if (ssrs.nonEmpty) publish(  SentinelUpdates(ssrs))
     }
   }
-
 
   def updateDevice (r: SentinelSensorReading): Boolean = {
     val recordType = r.readingType
@@ -319,26 +327,56 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor wit
 
   //--- commands
 
-  // TODO - this should eventually become a Map (requestId->cmdRequest)
-  var pendingCmdRequests: Queue[SentinelCommandRequest] = Queue.empty
+  var pendingCmdRequests: Map[String,SentinelCommandRequest] = Map.empty  // messageId -> cr
 
   def processSentinelCommandRequest(cr: SentinelCommandRequest): Unit = {
     val msg = jsonWriter.toNewJson(cr.cmd)
     info(s"sending command: '$msg'")
-    pendingCmdRequests = pendingCmdRequests.enqueue(cr)
+
+    pendingCmdRequests = pendingCmdRequests + (cr.cmd.msgId -> cr)
 
     processOutgoingMessage(msg)
   }
 
-  def processCommandResponse (notification: SentinelNotification, data: Array[Byte]): Unit = {
-    pendingCmdRequests.dequeueOption match {
-      case Some((cr,newQueue)) =>
-        pendingCmdRequests = newQueue
+  def processCommandResponse (response: SentinelResponse, data: Array[Byte]): Unit = {
+    pendingCmdRequests.get(response.msgId) match {
+      case Some(cr) =>
+        pendingCmdRequests = pendingCmdRequests - response.msgId
         val msgText = ifTrueSome(cr.requestText){ new String(data) }
-        cr.sender ! SentinelCommandResponse(cr.remoteAddress, Some(notification), msgText)
+        cr.sender ! SentinelCommandResponse(cr, response, msgText)
 
       case None =>
-        warning(s"unexpected command response: $notification")
+        warning(s"unexpected command response: $response")
+    }
+  }
+
+
+  //--- heartbeats are a special (automatically processed) command type (we don't put them into pendingCmdRequests)
+
+  var lastPing: DateTime = DateTime.UndefinedDateTime
+  var roundTripTime: Time = Time.UndefinedTime // this includes network latency
+  var serverResponseTime: Time = Time.UndefinedTime // time between request and server response
+
+  def sendPing(): Unit = {
+    if (isConnected) {
+      lastPing = DateTime.now // this is always wallclock time
+      val cmd = PingCommand(SentinelCommand.newMsgId(), lastPing)
+      val msg = jsonWriter.toNewJson(cmd)
+      info(s"sending ping to remove server at $lastPing")
+      processOutgoingMessage(msg)
+    }
+  }
+
+  def processPongResponse (pong: SentinelPongNotification): Unit = {
+    if (pong.requestTime == lastPing) {
+      roundTripTime = DateTime.now.timeSince(lastPing)
+      serverResponseTime = pong.responseTime.timeSince(lastPing)
+      info(s"received pong response with roundTrip: $roundTripTime ($serverResponseTime)")
+
+      // TODO - add roundtrip monitoring here
+
+    } else {
+      warning(s"received unsolicited Pong notification: $pong, last ping at: $lastPing")
     }
   }
 

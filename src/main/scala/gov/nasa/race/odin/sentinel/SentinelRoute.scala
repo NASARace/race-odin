@@ -190,6 +190,8 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
 
   //--- websocket support
 
+  var pendingCmdRequests: Map[String,SentinelCommandRequest] = Map.empty
+
   // called from our DataClient actor
   // NOTE - this is called from the actor thread, beware of data races
   def receiveSentinelData: Receive = {
@@ -205,10 +207,17 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
         sentinelsMsg = None // re-serialize on next request
       }
 
-    case cr: SentinelCommandResponse =>
-      ifSome(cr.text) { txt=>
-        val msg = s"""{"cmdResponse":"${JsonWriter.toJsonString(txt)}"}"""
-        pushTo(cr.remoteAddress, TextMessage.Strict(msg))
+    case cr: SentinelCommandResponse => // this is point-to-point from the connector actor
+      val msgId = cr.request.cmd.msgId
+      pendingCmdRequests.get(msgId) match {
+        case Some(req) =>
+          pendingCmdRequests = pendingCmdRequests - msgId
+          ifSome(cr.text) { txt =>
+            val msg = s"""{"cmdResponse":"${JsonWriter.toJsonString(txt)}"}"""
+            pushTo(req.remoteAddress, TextMessage.Strict(msg))
+          }
+        case None =>
+          warning(s"unknown request response ignored: $cr")
       }
   }
 
@@ -246,7 +255,10 @@ trait SentinelRoute extends  CesiumRoute with PushWSRaceRoute with PipedRaceData
       if (sentinelCmdParser.initialize(data)) {
         val parseResult = sentinelCmdParser.parseSentinelCommand()
         parseResult match {
-          case Some(cmd) => publishData( SentinelCommandRequest( actorRef, ctx.remoteAddress, cmd, true))
+          case Some(cmd) =>
+            val cr = SentinelCommandRequest( actorRef, ctx.remoteAddress, cmd, true)
+            pendingCmdRequests = pendingCmdRequests + (cmd.msgId -> cr)
+            publishData( cr)
           case None => warning(s"ignoring malformed command: '${sentinelCmdParser.dataAsString}'")
         }
       }

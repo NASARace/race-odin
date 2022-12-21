@@ -20,6 +20,7 @@ import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.UTF8JsonPullParser
 import gov.nasa.race.odin.sentinel.Sentinel.{DATA, DEVICE_ID, DEVICE_IDS, MESSAGE_ID, SENSOR_NO, SENSOR_TYPE}
 import gov.nasa.race.odin.sentinel.SentinelCommand.{STATE, TRIGGER_ALERT}
+import gov.nasa.race.uom.DateTime
 
 object SentinelNotification {
   val JOIN = asc("join")
@@ -32,6 +33,9 @@ object SentinelNotification {
   val ERROR = asc("error")
   val TYPE = asc("type")
   val MESSAGE = asc("message")
+  val PONG = asc("pong")
+  val REQUEST_TIME = asc("requestTime")
+  val RESPONSE_TIME = asc("responseTime")
 }
 import SentinelNotification._
 
@@ -40,10 +44,14 @@ import SentinelNotification._
  */
 trait SentinelNotification
 
+trait SentinelResponse extends SentinelNotification {
+  def msgId: String
+}
+
 /**
  * notification about successful join for device/sensor update notifications
  */
-case class SentinelJoinNotification (deviceIds: Seq[String], msgId: String) extends SentinelNotification
+case class SentinelJoinNotification (deviceIds: Seq[String], msgId: String) extends SentinelResponse
 
 /**
  * notification that there is a new sensor record available
@@ -53,7 +61,7 @@ case class SentinelRecordNotification (devideId: String, sensorNo: Int, sensorCa
 /**
  * error reported by the sentinel server
  */
-case class SentinelErrorNotification (message: String) extends SentinelNotification
+case class SentinelErrorNotification (deviceIds: Seq[String], msgId: String, message: String) extends SentinelNotification
 
 /**
  * TODO - check if this is just a failed command response
@@ -68,17 +76,22 @@ case class SentinelActionNotification (action: String, success: Boolean, deviceI
 /**
  * response to a TriggerAlertCommand
  */
-case class TriggerAlertNotification (deviceId: String, msgId: String, result: String) extends SentinelNotification
+case class TriggerAlertNotification (deviceId: String, msgId: String, result: String) extends SentinelResponse
 
 /**
  * response to a SwitchLightsCommand
  */
-case class SwitchLightsNotification (deviceId: String, msgId: String, subject: String, state: String) extends SentinelNotification
+case class SwitchLightsNotification (deviceId: String, msgId: String, subject: String, state: String) extends SentinelResponse
 
 /**
  * a remote server event that is not a response (error messages etc)
  */
 case class SentinelEventNotification (event: String, details: Option[String]) extends SentinelNotification
+
+/**
+ * remote server response to PingCommand
+ */
+case class SentinelPongNotification (msgId: String, requestTime: DateTime, responseTime: DateTime) extends SentinelResponse
 
 /**
  * JSON parsing support for SentinelNotifications
@@ -88,16 +101,23 @@ trait SentinelNotificationParser extends UTF8JsonPullParser {
   def parseNotification(): Option[SentinelNotification] = {
     ensureNextIsObjectStart()
     foreachMemberInCurrentObject {
-      case EVENT => value match {
-        case JOIN => return parseJoinEvent()
+      case EVENT => value match { // in order of probability
         case RECORD => return parseRecordEvent()
+        case PONG => return parsePongEvent()
+
+        case JOIN => return parseJoinEvent()
         case ERROR => return parseErrorEvent()
         case TRIGGER_ALERT => return parseTriggerAlertEvent()
-        case other => warning(s"unknown event type '$other'")
+
+        case other =>
+          warning(s"unknown event type '$other'")
+          return None
       }
-      case other => warning(s"unknown message '$other'")
+      case other =>
+        warning(s"unknown message '$other'")
+        return None
     }
-    None
+    None // can't get here
   }
 
   def parseJoinEvent(): Option[SentinelJoinNotification] = {
@@ -139,16 +159,41 @@ trait SentinelNotificationParser extends UTF8JsonPullParser {
     res
   }
 
+  def parsePongEvent(): Option[SentinelPongNotification] = {
+    var res: Option[SentinelPongNotification] = None
+    foreachRemainingMember {
+      case DATA =>
+        var requestTime = DateTime.UndefinedDateTime
+        var responseTime = DateTime.UndefinedDateTime
+        var msgId = ""
+
+        foreachMemberInCurrentObject {
+          case MESSAGE_ID => msgId = quotedValue.toString()
+          case REQUEST_TIME => requestTime = dateTimeValue
+          case RESPONSE_TIME => responseTime = dateTimeValue
+          case _ => // ignore
+        }
+        res = Option.when(requestTime.isDefined && responseTime.isDefined && !msgId.isEmpty)( SentinelPongNotification(msgId, requestTime, responseTime))
+      case _ =>
+    }
+    res
+  }
+
   def parseErrorEvent(): Option[SentinelErrorNotification] = {
     var res: Option[SentinelErrorNotification] = None
     foreachRemainingMember {
       case DATA =>
         var msg = ""
+        var msgId = ""
+        var deviceIds = Seq.empty[String]
+
         foreachMemberInCurrentObject {
+          case DEVICE_IDS => deviceIds = readCurrentStringArray()
+          case MESSAGE_ID => msgId = quotedValue.intern
           case MESSAGE => msg = quotedValue.toString()
           case _ => // ignore
         }
-        res = Option.when(!msg.isEmpty)( SentinelErrorNotification(msg))
+        res = Option.when(!msg.isEmpty)( SentinelErrorNotification(deviceIds, msgId, msg))
       case _ =>
     }
     res

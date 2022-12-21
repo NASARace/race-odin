@@ -86,7 +86,7 @@ class SentinelSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a SentinelParser" should "parse known SentinelCommands" in {
-    val input = """{"event":"command","data":{"action":"inject","deviceIds":["roo7gd1dldn3"]}}"""
+    val input = """{"event":"trigger-alert","data":{"messageId":"MSG-42","deviceIds":["roo7gd1dldn3"]}}"""
     println(s"--- parsing:\n$input")
 
     val parser = new SentinelParser()
@@ -94,5 +94,15 @@ class SentinelSpec extends AnyFlatSpec with RaceSpec {
     val cmd = parser.parseSentinelCommand()
 
     println(s"got command: $cmd")
+  }
+
+  "a SentinelNotificationParser" should "parse a known SentinelPongNotification" in {
+    val input = """{"event":"pong","data":{"requestTime":1670460570780,"messageId":"MSG-2","responseTime":1670460571027}}"""
+    println(s"--- parsing:\n$input")
+    val parser = new SentinelNotificationParser {}
+    parser.initialize(input.getBytes)
+    val notification = parser.parseNotification()
+
+    println(s"got notification: $notification")
   }
 }

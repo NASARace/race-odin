@@ -20,6 +20,7 @@ import akka.actor.ActorRef
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{JsonSerializable, JsonWriter, UTF8JsonPullParser}
 import gov.nasa.race.odin.sentinel.Sentinel.{DATA, DEVICE_IDS, EVENT, MESSAGE_ID}
+import gov.nasa.race.uom.DateTime
 
 import java.net.InetSocketAddress
 
@@ -56,6 +57,9 @@ trait SentinelCommand extends JsonSerializable {
   def serializeDataMembersTo(writer: JsonWriter): Unit
 }
 
+/**
+ * command to upload fire image to device, which should trigger an alert
+ */
 case class TriggerAlertCommand(msgId: String, deviceIds: Seq[String]) extends SentinelCommand {
   val event = TRIGGER_ALERT.toString()
 
@@ -65,6 +69,9 @@ case class TriggerAlertCommand(msgId: String, deviceIds: Seq[String]) extends Se
   }
 }
 
+/**
+ * command to switch device lights on/off (visual feedback of responsiveness)
+ */
 case class SwitchLightsCommand(msgId: String, deviceIds: Seq[String], subject: String, state: String) extends SentinelCommand {
   val event = SWITCH_LIGHTS.toString()
 
@@ -76,6 +83,9 @@ case class SwitchLightsCommand(msgId: String, deviceIds: Seq[String], subject: S
   }
 }
 
+/**
+ * command to open/close device valve
+ */
 case class SwitchValveCommand(msgId: String, deviceIds: Seq[String], state: String) extends SentinelCommand {
   val event = SWITCH_VALVE.toString()
 
@@ -86,9 +96,21 @@ case class SwitchValveCommand(msgId: String, deviceIds: Seq[String], state: Stri
   }
 }
 
+/**
+ * command to check server response
+ */
+case class PingCommand (msgId: String, requestTime: DateTime) extends SentinelCommand {
+  val event = "ping"
+
+  def serializeDataMembersTo(writer: JsonWriter): Unit = {
+    writer.writeDateTimeMember("requestTime", requestTime)
+    writer.writeStringMember("messageId", msgId)
+  }
+}
+
 //---wrappers that associates the requesting client with the command/response
 case class SentinelCommandRequest (sender: ActorRef, remoteAddress: InetSocketAddress, cmd: SentinelCommand, requestText: Boolean)
-case class SentinelCommandResponse (remoteAddress: InetSocketAddress, response: Option[SentinelNotification], text: Option[String])
+case class SentinelCommandResponse (request: SentinelCommandRequest, response: SentinelResponse, text: Option[String])
 
 /**
  * JSON parsing support for SentinelCommands

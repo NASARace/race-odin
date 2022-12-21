@@ -612,15 +612,15 @@ let diagnosticCommands = new Map([
 ]);
 
 function triggerAlertCmd() {
-    return `{"event": "trigger-alert",\n  "data":{ "deviceIds": ["DEVICE"]}}`;
+    return `{"event": "trigger-alert",\n  "data":{ "deviceIds": ["$DEVICE"]}}`;
 }
 
 function turnLightsOnCmd() {
-    return `{"event": "switch-lights",\n  "data":{ "type": "external-lights",\n  "state": "on",\n     "deviceIds": ["DEVICE"]}}`;
+    return `{"event": "switch-lights",\n  "data":{ "type": "external-lights",\n  "state": "on",\n     "deviceIds": ["$DEVICE"]}}`;
 }
 
 function turnLightsOffCmd() {
-    return `{"event": "switch-lights",\n  "data":{ "subject": "external-lights",\n  "state": "off",\n     "deviceIds": ["DEVICE"]}}`;
+    return `{"event": "switch-lights",\n  "data":{ "subject": "external-lights",\n  "state": "off",\n     "deviceIds": ["$DEVICE"]}}`;
 }
 
 ui.exportToMain(function selectSentinelCmd(event) {
@@ -637,16 +637,22 @@ ui.exportToMain(function selectSentinelCmd(event) {
     }
 });
 
+function resolveCmdVariables(cmd) {
+    if (cmd.includes("$DEVICE")) {
+        if (!selectedSentinelEntry) {
+            alert("please select device before sending command");
+            return;
+        }
+        cmd = cmd.replace("$DEVICE", selectedSentinelEntry.id);
+    }
+    //... and possibly more variables to follow
+    return cmd;
+}
+
 ui.exportToMain(function sendSentinelCmd() {
     let cmd = ui.getTextAreaContent("sentinel.diag.cmd");
     if (cmd){
-        if (cmd.includes("DEVICE")) {
-            if (!selectedSentinelEntry) {
-                alert("please select device before sending command");
-                return;
-            }
-            cmd = cmd.replace("DEVICE", selectedSentinelEntry.id);
-        }
+        cmd = resolveCmdVariables(cmd);
 
         try {
             let o = JSON.parse(cmd);
