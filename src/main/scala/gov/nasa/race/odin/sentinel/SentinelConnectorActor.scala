@@ -120,7 +120,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
 
   override def onConnect(): Unit = {
     info(s"connected to $wsUri")
-    devices.foreach( e=> registerForDeviceUpdates(e._1)) // note we only connect after we already got devices
+    // note we still have to wait for an explicit "connected" event before registering for device updates
     nSuccessfulConnects += 1
   }
   override def onConnectFailed (uri: String, cause: String): Unit = {
@@ -159,6 +159,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
           sn match {
             case n: SentinelPongNotification => processPongResponse(n)
 
+            case n: SentinelConnectedNotification => processConnectedNotification(n)
             case n: SentinelJoinNotification => info(s"""joined sentinel notification for devices: ${n.deviceIds.mkString(",")}""")
             case n: SentinelRecordNotification => requestUpdateRecord( n.devideId, n.sensorNo, n.sensorCapability)
             case n: SentinelErrorNotification => warning(s"received error notification: '${n.message}'")
@@ -244,6 +245,11 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
         case None => warning(s"ignoring sensor info for unknown device: ${msg.deviceId}")
       }
     }
+  }
+
+  def processConnectedNotification(n: SentinelConnectedNotification): Unit = {
+    info(s"websocket connection authenticated, register for device updates")
+    devices.foreach( e=> registerForDeviceUpdates(e._1)) // note we only connect after we already got devices
   }
 
   def registerForDeviceUpdates(deviceId: String): Unit = {

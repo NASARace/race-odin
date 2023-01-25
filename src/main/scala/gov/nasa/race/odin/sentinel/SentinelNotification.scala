@@ -23,6 +23,7 @@ import gov.nasa.race.odin.sentinel.SentinelCommand.{STATE, TRIGGER_ALERT}
 import gov.nasa.race.uom.DateTime
 
 object SentinelNotification {
+  val CONNECTED = asc("connected")
   val JOIN = asc("join")
   val RECORD = asc("record")
   val RECEIVED = asc("received")
@@ -52,6 +53,11 @@ trait SentinelResponse extends SentinelNotification {
  * notification about successful join for device/sensor update notifications
  */
 case class SentinelJoinNotification (deviceIds: Seq[String], msgId: String) extends SentinelResponse
+
+/**
+ * notification that server authentication is complete and we can proceed with join requests
+ */
+case class SentinelConnectedNotification () extends SentinelNotification
 
 /**
  * notification that there is a new sensor record available
@@ -105,6 +111,7 @@ trait SentinelNotificationParser extends UTF8JsonPullParser {
         case RECORD => return parseRecordEvent()
         case PONG => return parsePongEvent()
 
+        case CONNECTED => return parseConnectedEvent()
         case JOIN => return parseJoinEvent()
         case ERROR => return parseErrorEvent()
         case TRIGGER_ALERT => return parseTriggerAlertEvent()
@@ -118,6 +125,11 @@ trait SentinelNotificationParser extends UTF8JsonPullParser {
         return None
     }
     None // can't get here
+  }
+
+  // nothing here yet but we might add payload data in the future
+  def parseConnectedEvent():  Option[SentinelConnectedNotification] = {
+    Some(SentinelConnectedNotification())
   }
 
   def parseJoinEvent(): Option[SentinelJoinNotification] = {
