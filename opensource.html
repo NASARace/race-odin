@@ -39,6 +39,7 @@
                   <li class="level2"><a href="archive-demo.html">Building and Running Archive Replay Demo</a></li>
                   <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
                   <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2"><a href="data-sources.html">Wildland Fire Data Sources</a></li>
                   <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
                   <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
                   <li class="level2"><a href="common-root.html">Create Common Root Dir for RACE/ODIN</a></li>
@@ -52,27 +53,31 @@
 
         <div class="main">
             <h1 id="why-is-odin-fire-open-sourced" class="title">Why is ODIN-fire Open Sourced</h1>
-            <p>There are three types of stakeholder categories</p>
+            <p>ODIN assumes two general categories of stakeholders: providers and users.</p>
+            <p>Provider stakeholders are sub-categorized into</p>
             <ul>
-              <li>agencies (fire, land management, local/state/federal government etc.)</li>
+              <li>ODIN maintainers - focused on the framework and common infrastructure</li>
             </ul>
             <ul>
-              <li>research organizations</li>
+              <li>vendors - commercial entities that create open or closed components for ODIN, including interfaces to connect/use proprietary devices and services</li>
             </ul>
             <ul>
-              <li>companies with wildland fire related products and services</li>
+              <li>research organizations - producing components that make their research topics available in ODIN applications</li>
             </ul>
-            <p>This means the stakeholder community is larger than &quot;just&quot; fire agencies, of which there already are hundreds. The goal is
-            to provide some common ground for the whole stakeholder community with a low barrier of entry for everybody.</p>
-            <img class="center scale60" src="images/odin-open.svg">
-            <p>This does not mean that all applications built with ODIN-fire have to be public, and it especially does not mean that
-            ODIN-fire based components developed by 3rd parties (e.g. vendors) have to be open sourced. ODIN-fire (like the rest of 
-            <a href="http://nasarace.github.io/race/">RACE</a> is published under <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache<em>License</em>v2</a> 
-            and hence supports to develop closed, commercial software on top of it.</p>
-            <p>The goal is that no stakeholder has to develop from scratch, and that - from a technical point of view - new 3rd party 
-            components/services can easily be integrated by other stakeholders. To that end ODIN-fire itself is open sourced and royalty free.</p>
-            <p>Of course every individual or organization that wants to add to the public basis is more than welcome to become an
-            ODIN-fire contributor. Our ultimate goal is a synergetic community to tackle the increasingly hard problem of wildland fire management.</p>
+            <img class="center scale60" src="images/open-source.svg">
+            <p>User stakeholders are more than just fire agencies. This category also includes communities and commercial or government entities that operate fire detection and threat modeling systems to protect their (local) assets. What is common between user stakeholders is their general focus on improved situational awareness, which requires access to a broad range of external and internal data, potentially including low latency (tracking) information.</p>
+            <p>There are three conclusions to draw from this stakeholder variety:</p>
+            <ul>
+              <li>there is an open number of potential applications</li>
+            </ul>
+            <ul>
+              <li>inter-operability between those applications is relevant</li>
+            </ul>
+            <ul>
+              <li>most user stakeholder organizations lack the resources to create and maintain their own framework systems</li>
+            </ul>
+            <p>ODIN-fire is aimed at providing a common, open sourced framework that is available to all stakeholders so that no one has to develop their applications from scratch. To that end ODIN-fire itself is published under <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache<em>License</em>v2</a> and can be distributed free of royalties.</p>
+            <p>This does not mean that all ODIN-fire applicatins and components have to be public. The license allows stakeholders to create and sell commercial (closed source) components and services. However, the over-arching goal for ODIN-fire is to bundle and save efforts in the wildland fire stakeholder community by creating a common basis for all its members. </p>
         </div>
 
     </body>

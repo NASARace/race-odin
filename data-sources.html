@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Wildland Fire Data Sources</a></li>
+                  <li class="level2"><a href="#fire-detection-and-tracking">Fire Detection and Tracking</a></li>
+                  <li class="level2"><a href="#fire-danger-fuels-and-disturbances">Fire Danger, Fuels and Disturbances</a></li>
+                  <li class="level2"><a href="#weather">Weather</a></li>
+                  <li class="level2"><a href="#infrastructure-and-borders">Infrastructure and Borders</a></li>
+                  <li class="level2"><a href="#object-tracking">Object Tracking</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation for RACE-ODIN</a></li>
+                  <li class="level2"><a href="vision.html">Vision behind RACE-ODIN</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="live-demo.html">Building and Running Live Data Demo</a></li>
+                  <li class="level2"><a href="archive-demo.html">Building and Running Archive Replay Demo</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2 active"><a href="#">Wildland Fire Data Sources</a></li>
+                  <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
+                  <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
+                  <li class="level2"><a href="common-root.html">Create Common Root Dir for RACE/ODIN</a></li>
+                  <li class="level2"><a href="cesium-access-token.html">Cesium Access Token</a></li>
+                  <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+                  <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
+                  <li class="level2"><a href="prerequisites.html">Check Prerequisites for RACE-ODIN</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="wildland-fire-data-sources" class="title">Wildland Fire Data Sources</h1>
+            <p>This document is a catalog of current and potentially future ODIN data sources. It is by no means complete and will be continuously updated. The main data categories are:</p>
+            <ol class="arabic">
+              <li>fire detection and tracking</li>
+            </ol>
+            <ol class="arabic">
+              <li>fire danger, fuels and disturbances</li>
+            </ol>
+            <ol class="arabic">
+              <li>weather</li>
+            </ol>
+            <ol class="arabic">
+              <li>infrastructure</li>
+            </ol>
+            <ol class="arabic">
+              <li>object tracking</li>
+            </ol>
+            <hr>
+            
+            <h2 id="fire-detection-and-tracking" class="section"><a class="anchor-link left" href="#fire-detection-and-tracking"><i class="icofont-laika">&#xef71;</i></a>Fire Detection and Tracking</h2>
+            <p>This category includes sources that can be used to detect new fires in realtime, and to track fire spread/perimeters
+            for known fires.</p>
+            
+            <h3 id="goes-satellites" class="section"><a class="anchor-link left" href="#goes-satellites"><i class="icofont-laika">&#xef71;</i></a>GOES Satellites</h3>
+            <p>The <a href="https://www.goes-r.gov">Geostationary Operational Environmental Satellites, R-Series</a> (designated GOES-x after launch) provide continuous weather imagery and monitoring of meteorological and space environment data across North and Central America. There are currently two operational satellites: GOES-16 (east) and GOES-17 (west). GOES-18 is slated to replace GOES-17 in early 2023.</p>
+            <p>The primary instrument onboard of these satellites is the <a href="http:https://www.goes-r.gov/spacesegment/abi.html">Advanced Baseline Imager (ABI)</a>. A collection of visual images created by ABI can be found <a href="https://www.star.nesdis.noaa.gov/GOES/sector.php?sat=G17&sector=wus">here</a>. The <a href="https://www.goes-r.gov/downloads/resources/documents/Beginners_Guide_to_GOES-R_Series_Data.pdf">Beginner&#39;s Guide to GOES-R Data</a> is a general introduction.</p>
+            <p>The most relevant fire-related data product created with ABI is the short-wave infrared based <strong>Fire / Hot Spot Characterization</strong> for which more information is available in the following documents:</p>
+            <ul>
+              <li><a href="https://www.goes-r.gov/products/docs/PUG-L2+-vol5.pdf">GOES-R Series Product Definition User&#39;s Guide</a>(pg 472ff)</li>
+            </ul>
+            <ul>
+              <li><a href="https://www.star.nesdis.noaa.gov/goesr/docs/ATBD/Fire.pdf">GOES-R Advanced Baseline Imager (ABI) Algorithm Theoretical Basis Document For Fire / Hot Spot Characterization</a></li>
+            </ul>
+            <p>This data product is updated every 5 minutes. The surface footprint of a fire pixel is about 2x2km at nadir.</p>
+            <p>Data access is through <a href="https://aws.amazon.com/s3/">Amazon S3</a>, region &#39;<strong>us-east-1</strong>&#39;,  buckets &#39;<strong>noaa-goes-16</strong>&#39; and
+            &#39;<strong>noaa-goes-17</strong>&#39;. The data format is <a href="https://www.unidata.ucar.edu/software/netcdf/">NetCDF</a>, the data rate approximately 800 kB/5min per satellite. <a href="https://home.chpc.utah.edu/~u0553130/Brian_Blaylock/cgi-bin/goes16_download.cgi">Interactive and archived data</a> is available.</p>
+            <p>ODIN currently supports the following functions:</p>
+            <ul>
+              <li>live import (race-earth: <code>GoesRImportActor</code>, <code>GoesRDataReader</code>)</li>
+            </ul>
+            <ul>
+              <li>browser-based visualization (race-cesium: <code>CesiumGoesrRoute</code>)</li>
+            </ul>
+            <p>As geostationary satellites the GOES-R series provides constant observation of the same area but - due to the high orbit (35,786 km) - lower spatial resolution and confidence. Satellites in this category are therefore primarily sources for low-latency detection of potential fires which should then be further investigated by higher resolution sensors. Consequently, ODIN uses GOES-R data as a time series in which hotspots should always be looked at in temporal and spatial context.</p>
+            
+            <h3 id="jpss-satellites" class="section"><a class="anchor-link left" href="#jpss-satellites"><i class="icofont-laika">&#xef71;</i></a>JPSS Satellites</h3>
+            <p>The <a href="https://www.nesdis.noaa.gov/about/our-offices/joint-polar-satellite-system-jpss-program-office">Joint Polar Satellite System (JPSS)</a> currently includes two satellites: Suomi-NPP and NOAA-20. JPSS-2 is scheduled to launch by end of 2022. JPSS satellites have sun-synchronous orbits with a period of about 101 minutes at an average altitude of 800km. The satellites are spaced a half-orbit apart on the same orbital plane.</p>
+            <p>The primary instrument on board of JPSS satellites is the <a href="https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/viirs/">Visible Infrared Imaging Radiometer Suite (VIIRS)</a>. Additional information about VIIRS and its I-band based fire product is available here:</p>
+            <ul>
+              <li><a href="https://ncc.nesdis.noaa.gov/documents/documentation/viirs-users-guide-tech-report-142a-v1.3.pdf">VIIRS Sensor Data Record User&#39;s Guide</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://rammb.cira.colostate.edu/projects/npp/Beginner_Guide_to_VIIRS_Imagery_Data.pdf">Beginner&#39;s Guide to VIIRS Imagery Data</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://www.earthdata.nasa.gov/learn/find-data/near-real-time/firms/viirs-i-band-375-m-active-fire-data">VIIRS I-Band 375m Active Fire Data</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://viirsland.gsfc.nasa.gov/PDF/VIIRS_activefire_User_Guide.pdf">VIIRS 375m &amp; 750m Active Fire Products Users&#39;s Guide</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://www.sciencedirect.com/science/article/pii/S0034425713004483">The New VIIRS 375 m active fire detection data product: Algorithm description and initial assessment</a></li>
+            </ul>
+            <p>VIIRS is a whisk-broom scanner with a large across-track swath of about 3000km, providing a significant overlap between consecutive overpasses. Each satellite can therefore produce data for a given location in CONUS 2-4 times per day. Surface footprint of VIIRS fire pixels is about 375x375m at nadir.</p>
+            <p>There are several potential access points and mechanisms for VIIRS fire products, including <a href="https://www.earthdata.nasa.gov/learn/find-data/near-real-time/firms/active-fire-data">interactive, archived download</a> in various formats (CSV, KML, shape file), and as <a href="https://www.unidata.ucar.edu/software/netcdf/">NetCDF</a> files from <a href="https://nrt3.modaps.eosdis.nasa.gov/archive/allData/5200">https://nrt3.modaps.eosdis.nasa.gov/archive/allData/5200</a>. Visual content is availble through NASA&#39;s <a href="https://firms.modaps.eosdis.nasa.gov/">Fire Information for Resource Management System</a>.</p>
+            <p>These sources differ in latency, based on downlink mechanism and locations: <a href="https://wiki.earthdata.nasa.gov/display/FIRMS/2022/07/14/Wildfire+detection+in+the+US+and+Canada+within+a+minute+of+satellite+observation">ultra-realtime (URT), realtime (RT)and near-realtime (NRT)</a>.</p>
+            <p>ODIN uses the <a href="https://firms.modaps.eosdis.nasa.gov/usfs/api/area/">FIRMS http API</a> to retrieve the ultra-realtime (URT) VIIRS fire product in several configured time steps after each overpass for a configured area. This means that hotspot data for the same locations can change when post-processed data (NRT) becomes available. The format is CSV, data rate primarily depends on the number of detected hotspots (about 1MB per overpass with active fires). Overpass times are calculated based on <a href="https://www.space-track.org/documentation#/tle">TLEs</a> retrieved from <space-track.org>.</p>
+            <p>ODIN currently supports the following functions:</p>
+            <ul>
+              <li>live import (race-earth: <code>JpssImportActor</code>, <code>JpssDataReader</code>)</li>
+            </ul>
+            <ul>
+              <li>browser-based visualization (race-cesium: <code>CesiumJpssRoute</code>)</li>
+            </ul>
+            <ul>
+              <li>preliminary archive replay (race-earth: <code>HotspotReplayActor</code>, race-cesium: <code>CesiumHotspotRoute</code>, both to be unified with respective <code>Jpss</code> components)</li>
+            </ul>
+            <p>Resolution of VIIRS hotspots is usually good enough to map to terrain, i.e. this data - if available in adequate time - can be used to verify GOES hotspots and track known fires.</p>
+            
+            <h3 id="aqua-and-terra-satellites" class="section"><a class="anchor-link left" href="#aqua-and-terra-satellites"><i class="icofont-laika">&#xef71;</i></a>Aqua and Terra Satellites</h3>
+            <p>The sun-synchronous polar orbiters <a href="https://aqua.nasa.gov/">Aqua</a> and <a href="https://terra.nasa.gov/">Terra</a> have orbital periods of 99min at an altitude of about 700km. Both fly the <a href="https://modis.gsfc.nasa.gov/about/">Moderate Resolution Imaging SpectroRadiometer (MODIS)</a> which is a predecessor of VIIRS that provides roughly half the resolution (1kmx1km at nadir) for fire pixel surface footprints. Each satellite delivers two overpasses per day for CONUS.</p>
+            <p>Data formats and access mechanisms for MODIS satellites is very similar to JPSS/VIIRS. The preferred source is again the <a href="https://firms.modaps.eosdis.nasa.gov/usfs/api/area/">FIRMS http API</a> that provides CSV with a slightly different attribute table. The same <a href="https://wiki.earthdata.nasa.gov/display/FIRMS/2022/07/14/Wildfire+detection+in+the+US+and+Canada+within+a+minute+of+satellite+observation">ultra-realtime (URT), realtime (RT)and near-realtime (NRT)</a> considerations apply.</p>
+            <p>Due to its medium resolution MODIS satellite data is mostly used as a backup for VIIRS and to fill time gaps.</p>
+            
+            <h3 id="landsat-8-and-landsat-9" class="section"><a class="anchor-link left" href="#landsat-8-and-landsat-9"><i class="icofont-laika">&#xef71;</i></a>Landsat-8 and Landsat-9</h3>
+            <p>The <a href="https://www.usgs.gov/landsat-missions/landsat-8">Landsat 8</a> and <a href="https://www.usgs.gov/landsat-missions/landsat-9">Landsat-9</a> satellites are also a sun-synchronous polar orbiters at an altitude of about 700km. Both fly the <a href="https://landsat.gsfc.nasa.gov/satellites/landsat-9/landsat-9-instruments/oli-2-design/">Operational Land Imager (OLI) instrument</a>, which is a push-broom imager with a narrow 185km across-track swath, a pixel resolution of 30m and a revisit time of 16 days.</p>
+            <p>Due to the low temporal resolution Landsat data has been mostly used for burnt area detection and less for active fire detection. Active fire detection is described in <a href="https://reader.elsevier.com/reader/sd/pii/S0034425715301206?token=3C305FBAB1CB3B25F49554E97C0143A723E7F38DE7D0E3492B9ADB4979EAE2992F2793FF6C9088591DA639B04CDCB6D1&originRegion=us-east-1&originCreation=20220928052330">Schroeder et al 2015</a> and <a href="https://www.researchgate.net/publication/320673228_Global_operational_land_imager_Landsat-8_reflectance-based_active_fire_detection_algorithm">Kumar and Roy 2018</a>.</p>
+            <p>Landsat data is available from several sites <a href="https://www.usgs.gov/landsat-missions/landsat-data-access">listet here</a>, including (<a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html">requester pays</a>) Amazon S3 (region: us-west-2, bucket: usgs-landsat) and interactively via the <a href="https://landsatlook.usgs.gov/stac-browser">SpatioTemporal Asset Catalog (STAC) browser</a> and the <a href="https://stac-utils.github.io/stac-server/">STAC server API</a>. More information is available <a href="https://www.usgs.gov/landsat-missions/landsat-commercial-cloud-data-access">here</a>.</p>
+            
+            <h3 id="copernicus-sentinel-2-satellites" class="section"><a class="anchor-link left" href="#copernicus-sentinel-2-satellites"><i class="icofont-laika">&#xef71;</i></a>Copernicus Sentinel-2 Satellites</h3>
+            <p><a href="https://www.esa.int/">ESAs</a> <a href="https://sentinel.esa.int/web/sentinel/missions/sentinel-2">Copernicus Sentinel-2A and -2B</a> satellites are polar orbiters that fly the the <a href="https://sentinels.copernicus.eu/web/sentinel/technical-guides/sentinel-2-msi/msi-instrument">MultiSpectral Instrument (MSI)</a>, featuring 13 spectral bands, a revisit time of less than 5 days, a 290km wide cross-track swath and  spatial resolution up to 20m.</p>
+            <p>Like Landsat the Sentinel-2 satellites have been mostly used for burnt area detection. An active fire detection algorithm based on MSI is described by <a href="https://reader.elsevier.com/reader/sd/pii/S0303243421000544?token=171F4942D9D809CB89B39E1F5A152736E0B67C975EA5C0649843144488B19E2D5733A9C096CEE9A4197FD25677E49045&originRegion=us-east-1&originCreation=20220928051435">Hu et al 2021</a>.</p>
+            <p>Data is available at the <a href="https://registry.opendata.aws/sentinel-2/">Sentinel-2 Open Data on AWS registry</a>(requester pays).</p>
+            <p>According to <a href="https://www.mdpi.com/2072-4292/9/9/902/htm">Li and Roy 2017</a> a combination of Landsat-8, Sentinel-2A and Sentinel-2B can achieve a revisit interval of 2.9 days.</p>
+            <p>Other satellites that could be used for active fire monitoring include <a href="https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-3-slstr/applications/land-monitoring/fire-location-radiative-power">Sentinel-3 (STLR)</a> and <a href="https://ieeexplore.ieee.org/document/8022983">FengYun-3C VIRR</a>.</p>
+            
+            <h3 id="firms" class="section"><a class="anchor-link left" href="#firms"><i class="icofont-laika">&#xef71;</i></a>FIRMS</h3>
+            <p>NASAs <a href="https://firms.modaps.eosdis.nasa.gov/">Fire Information for Resource Management System (FIRMS)</a> site includes an <a href="https://firms.modaps.eosdis.nasa.gov/usfs/map/#d:24hrs;@-100.0,40.0,4z">interactive viewer</a>, <a href="https://firms.modaps.eosdis.nasa.gov/download/create.php">archive download</a> and <a href="https://firms.modaps.eosdis.nasa.gov/usfs/active_fire/">active fire data</a> for VIIRS and MODIS satellites as CSV, KML and shapefiles.</p>
+            <p>The <a href="https://firms.modaps.eosdis.nasa.gov/usfs/api/area/">REST API</a> provides spatial, temporal and satellite filters for download of standard (SP), near realtime (NRT), realtime (RT) and ultra-realtime (URT) MODIS and VIIRS data in CSV format. This is considered to be the best source of low latency MODIS and VIIRS active fire data.</p>
+            
+            <h3 id="global-imagery-browse-service-gibs" class="section"><a class="anchor-link left" href="#global-imagery-browse-service-gibs"><i class="icofont-laika">&#xef71;</i></a>Global Imagery Browse Service (GIBS)</h3>
+            <p>Many of the GOES, JPSS, Aqua and Terra data products are also available as WMS or WMTS services on <a href="https://nasa-gibs.github.io/gibs-api-docs/access-basics/#access-basics">NASAs Global Imagery Browse Services (GIBS)</a> site.</p>
+            
+            <h3 id="uas-based-fire-tracking" class="section"><a class="anchor-link left" href="#uas-based-fire-tracking"><i class="icofont-laika">&#xef71;</i></a>UAS Based Fire Tracking</h3>
+            <p>TBD.</p>
+            
+            <h3 id="ground-based-fire-sensors" class="section"><a class="anchor-link left" href="#ground-based-fire-sensors"><i class="icofont-laika">&#xef71;</i></a>Ground Based Fire Sensors</h3>
+            <p>Stationary fire sensors are currently mostly a commercial domain. Potential data sources will be added when technical information about data type and access becomes available.</p>
+            
+            <h4 id="delphire-sentinel" class="section"><a class="anchor-link left" href="#delphire-sentinel"><i class="icofont-laika">&#xef71;</i></a>Delphire Sentinel</h4>
+            <p><a href="https://delphiretech.com/sentinel">Delphire Sentinels</a> are multi-sensor devices placed along powerlines and other critical infrastructure, providing realtime visual, infrared, VOC and weather readings. Devices use on-board AI to minimize erroneous notifications and data volume. The primary use of Sentinel devices is to detect and report below-canopy fires with rapid response time.</p>
+            <p>ODIN supports realtime import of Sentinel data via <a href="https://delphiretech.com/sentinel/api/">http API</a>, using websocket notifications to minimize latency of device updates.</p>
+            
+            <h3 id="wildland-fire-interagency-geospatial-services-wfigs" class="section"><a class="anchor-link left" href="#wildland-fire-interagency-geospatial-services-wfigs"><i class="icofont-laika">&#xef71;</i></a>Wildland Fire Interagency Geospatial Services (WFIGS)</h3>
+            <p><a href="https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-current-wildland-fire-perimeters/about">WFIGS Current Wildland Fire Perimeters</a> is the authorative <a href="https://www.nifc.gov/">NIFC</a> source for wildland fire information, including wildfires and prescribed burns.</p>
+            <p>The data is available in several formats (CSV, KML, shapefile) and levels of detail. The most suitable/comprehensive form  for automatic import is <a href="https://geojson.org/">GeoJSON</a> obtained via <a href="https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-current-wildland-fire-perimeters/api">RESTful http API</a>. This API supports fine grained control over included context, location and shape information.</p>
+            <hr>
+            
+            <h2 id="fire-danger-fuels-and-disturbances" class="section"><a class="anchor-link left" href="#fire-danger-fuels-and-disturbances"><i class="icofont-laika">&#xef71;</i></a>Fire Danger, Fuels and Disturbances</h2>
+            
+            <h3 id="landfire-lf" class="section"><a class="anchor-link left" href="#landfire-lf"><i class="icofont-laika">&#xef71;</i></a>LANDFIRE (LF)</h3>
+            <p>The <a href="https://landfire.gov/">LANDFIRE</a> website (curated by DOI/USGS) provides geospatial data products for vegetation, fuels and disturbances (changes on landscape such as previous burns).</p>
+            <p>Interactive access to LANDFIRE imagery is available through <a href="https://www.landfire.gov/viewer/">this viewer</a>. The website also provides <a href="https://landfire.gov/version_download.php">full mosaic images</a>.</p>
+            <p>Automated access to LANDFIRE data is available through <a href="https://www.ogc.org/standards/wms">WMS</a> using <a href="https://landfire.gov/data_access.php">these URLs</a> or <a href="https://lfps.usgs.gov/arcgis/rest/services/LandfireProductService/GPServer">this ArcGIS REST API</a>. Since most of the data is imagery, WMS is the preferred access mechanism.</p>
+            <p>Available layers include:</p>
+            <ul>
+              <li>vegetation cover, height and type</li>
+            </ul>
+            <ul>
+              <li>
+                fuels
+                <ul>
+                  <li>surface and canopy</li>
+                </ul>
+                <ul>
+                  <li>fire behavior fuel models</li>
+                </ul>
+                <ul>
+                  <li>forest canopy bulk density, height and cover</li>
+                  <li>fuel disturbance</li>
+                  <li>fuelbeds</li>
+                </ul>
+              </li>
+            </ul>
+            
+            <h3 id="mtbs" class="section"><a class="anchor-link left" href="#mtbs"><i class="icofont-laika">&#xef71;</i></a>MTBS</h3>
+            <p>The interagency <a href="https://www.mtbs.gov/">Monitoring Trends in Burn Severity (MTBS)</a> project provides annual burn severity data as <a href="https://www.mtbs.gov/viewer/?region=conus">interactive viewer</a>, <a href="https://apps.fs.usda.gov/lcms-viewer/mtbs.html">MTBS Data Explorer</a> and <a href="https://www.mtbs.gov/direct-download">WMS or KML</a>.</p>
+            
+            <h3 id="wildland-fire-assessment-system-wfas" class="section"><a class="anchor-link left" href="#wildland-fire-assessment-system-wfas"><i class="icofont-laika">&#xef71;</i></a>Wildland Fire Assessment System (WFAS)</h3>
+            <p>The <a href="https://www.wfas.net/">Wildland Fire Assessment System (WFAS)</a> provides fire danger ratings and underlying data such as dead fuel moisture. The data is mostly distributed as static maps (*.png images) and is therefore not suitable for automatic processing or overlays. Some data is also available as <a href="https://developers.google.com/kml">KML layer</a>.</p>
+            <hr>
+            
+            <h2 id="weather" class="section"><a class="anchor-link left" href="#weather"><i class="icofont-laika">&#xef71;</i></a>Weather</h2>
+            
+            <h3 id="high-resolution-rapid-refresh-hrrr" class="section"><a class="anchor-link left" href="#high-resolution-rapid-refresh-hrrr"><i class="icofont-laika">&#xef71;</i></a>High Resolution Rapid Refresh (HRRR)</h3>
+            <p>NOAA&#39;s <a href="https://rapidrefresh.noaa.gov/hrrr/">High Resoltion Rapid Refresh</a> service provides atmospheric realtime 3km forecast data. Of special interest are surface wind (10m, average and gust potential, updated every 15min) and smoke fields (updated hourly).</p>
+            <p>Data access is via ftp or http as <a href="https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/">GRIB2</a> from <a href="https://www.nco.ncep.noaa.gov/pmb/products/hrrr/">NOAAs NCEP Central Operations server</a> or archived from <a href="https://registry.opendata.aws/noaa-hrrr-pds/">Amazon S3 (region &#39;us-east-1&#39;, bucket &#39;noaa-hrrr-bdp-pds&#39;)</a>.</p>
+            <p>The HRRR smoke product that is based on satellite FRP hotspots and HRRR wind forecast is also available with this <a href="https://realearth.ssec.wisc.edu/thredds/HRRR-smoke-surface">WMS configuration</a>.</p>
+            
+            <h3 id="raws" class="section"><a class="anchor-link left" href="#raws"><i class="icofont-laika">&#xef71;</i></a>RAWS</h3>
+            <p>There are about 2,200 <a href="https://raws.nifc.gov">Remote Automatic Weather Stations (RAWS)</a> within the US that monitor fire relevant weather information.</p>
+            <p>Data access is through <a href="https://weather.nifc.gov/ords/prd/f?p=107:900:9109639941099">REST API</a>, response format is JSON. Stations can be interactively queried <a href="https://weather.nifc.gov/ords/prd/f?p=107:100:9109639941099">here</a>, or map-based from <a href="https://raws.dri.edu/">this page</a>.</p>
+            
+            <h3 id="mesonet" class="section"><a class="anchor-link left" href="#mesonet"><i class="icofont-laika">&#xef71;</i></a>Mesonet</h3>
+            <p><a href="https://developers.synopticdata.com/mesonet/">Mesonet</a> supports queries for a large number of surface weather stations across the US through REST API, producing JSON data. A list of available data fields can be found <a href="https://developers.synopticdata.com/about/station-variables/">here</a>.</p>
+            <hr>
+            
+            <h2 id="infrastructure-and-borders" class="section"><a class="anchor-link left" href="#infrastructure-and-borders"><i class="icofont-laika">&#xef71;</i></a>Infrastructure and Borders</h2>
+            
+            <h3 id="homeland-infrastructure-foundation-level-data-hifld" class="section"><a class="anchor-link left" href="#homeland-infrastructure-foundation-level-data-hifld"><i class="icofont-laika">&#xef71;</i></a>Homeland Infrastructure Foundation Level Data (HIFLD)</h3>
+            <p>The <a href="https://hifld-geoplatform.opendata.arcgis.com/">Homeland Infrastructure Foundation-Level Data (HIFLD)</a> site provides a large variety of public infrastructure information, including</p>
+            <ul>
+              <li><a href="https://hifld-geoplatform.opendata.arcgis.com/datasets/electric-power-transmission-lines">electric power transmission lines</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://hifld-geoplatform.opendata.arcgis.com/datasets/geoplatform::electric-substations">electric substations</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://hifld-geoplatform.opendata.arcgis.com/datasets/geoplatform::fm-transmission-towers">radio transmission towers</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://hifld-geoplatform.opendata.arcgis.com/datasets/geoplatform::cellulartowers">cellular towers</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://hifld-geoplatform.opendata.arcgis.com/datasets/fire-stations">fire stations</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://hifld-geoplatform.opendata.arcgis.com/datasets/geoplatform::us-county-boundaries">county boundaries</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://hifld-geoplatform.opendata.arcgis.com/datasets/geoplatform::us-state-boundaries">state boundaries</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://hifld-geoplatform.opendata.arcgis.com/datasets/geoplatform::local-roads-72k-scale">local roads</a></li>
+            </ul>
+            <p>Each of the above topics is available in CSV, KML, shapefile and GeoJSON format. Since this data is semi-static downloads can be done manually.</p>
+            
+            <h3 id="osm-buildings" class="section"><a class="anchor-link left" href="#osm-buildings"><i class="icofont-laika">&#xef71;</i></a>OSM Buildings</h3>
+            <p>The <a href="https://osmbuildings.org/">OSM Buildings</a> database provides shapes and meta information of buildings in form of GeoJSON. The <a href="https://dev.overpass-api.de/overpass-doc/en/index.html">Overpass API</a> (http POST with query as form data) can be used to filter regions and objects of interest.</p>
+            
+            <h3 id="microsoft-usbuildingfootprints" class="section"><a class="anchor-link left" href="#microsoft-usbuildingfootprints"><i class="icofont-laika">&#xef71;</i></a>Microsoft USBuildingFootprints</h3>
+            <p>The <a href="https://github.com/microsoft/USBuildingFootprints">Microsoft US buildings footprint</a> Github repository contains a large number of buildings scanned from Bing imagery. Stated intention is to integrate this database into OSM Buildings but as of late 2022 the repository has not been fully merged and contains a superset of OSM Buildings. </p>
+            <hr>
+            
+            <h2 id="object-tracking" class="section"><a class="anchor-link left" href="#object-tracking"><i class="icofont-laika">&#xef71;</i></a>Object Tracking</h2>
+            
+            <h3 id="local-air-traffic" class="section"><a class="anchor-link left" href="#local-air-traffic"><i class="icofont-laika">&#xef71;</i></a>Local Air Traffic</h3>
+            <p>Local air traffic can be tracked by means of <a href="https://www.faa.gov/air_traffic/technology/adsb">Automatic Dependent Surveillance-Broadcast (ADS-B)</a>. Receivers are <a href="https://flightaware.com/adsb/piaware/build/">inexpensive and easy to build</a>. The open sourced <a href="https://github.com/flightaware/dump1090">dump1090 decoder</a> can be used to transform the radio signals into a <a href="http://woodair.net/SBS/Article/Barebones42_Socket_Data.htm">SBS compatible CSV stream</a>. Local ADS-B receivers typically provide 1Hz data.</p>
+            <p>Free ADS-B exchanges include <a href="https://www.adsbexchange.com/">ADS-B Exchange</a> and <a href="https://opensky-network.org/">OpenSky-network</a>.</p>
+            <p>Commercial flight tracking services include <a href="https://www.flightradar24.com/">flightradar24</a> and <a href="https://flightaware.com/">flightaware</a>.</p>
+            <p>These services provide about 5Hz data.</p>
+            <p>Space based ADS-B tracking is available from <a href="https://aireon.com/">Aireon</a>. This might be the best option for incidents in remote areas and mountainous terrain, especially if required response times are too short to install a local receiver network.</p>
+            
+            <h3 id="gps-ground-tracking" class="section"><a class="anchor-link left" href="#gps-ground-tracking"><i class="icofont-laika">&#xef71;</i></a>GPS Ground Tracking</h3>
+            <p>Various loggers for handheld GPS devices exist. The open source <a href="https://gpslogger.app/">GPSLogger for Android</a> provides configurable log packets and allows to connect to dedicated (own) log-servers, which both address security concerns.</p>
+            <p>The challenge for GPS ground tracking is again connectivity in the field. Incidents in remote areas/steep terrain usually don&#39;t have sufficient cell coverage to rely on off-the-shelf handheld GPS devices.</p>
+        </div>
+
+    </body>
+</html>

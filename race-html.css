@@ -25,6 +25,29 @@ h2 {
 
 h3 {
     font-size: 120%;
+    text-decoration: underline;
+    margin: 0.8em 0 0.4em 0;
+    clear: both;
+}
+
+h4 {
+    font-size: 110%;
+    text-decoration: underline;
+    margin: 0.8em 0 0.4em 0;
+    clear: both;
+}
+
+h5 {
+    font-size: 100%;
+    font-weight: bold;
+    text-decoration: underline;
+    margin: 0.8em 0 0.4em 0;
+    clear: both;
+}
+
+h6 {
+    font-size: 100%;
+    text-decoration: underline;
     margin: 0.8em 0 0.4em 0;
     clear: both;
 }
