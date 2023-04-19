@@ -66,6 +66,9 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
   override def defaultTickInterval: FiniteDuration = 60.seconds
   val reconnectDelay: FiniteDuration = config.getFiniteDurationOrElse("reconnect-delay", 5.seconds)
 
+  // for clients that do their own parsing/processing of record data
+  val writeToRaw: Option[String] = config.getOptionalString("write-to-raw")
+
   // websocket connection parameters
   val connectTimeout = config.getFiniteDurationOrElse("connect-timeout", 10.seconds)
   var nFailedConnects = 0 // number of consecutive connection timeouts/failures
@@ -276,6 +279,8 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
   }
 
   def processRecords(msg: RecordResponse): Unit = {
+    ifSome(writeToRaw){ publish(_, msg.data)} // for (optional) clients that do their own record parsing/processing
+
     if (parser.initialize(msg.data)) {
       val ssrs = parser.parseRecords().filter(updateDevice)
       if (ssrs.nonEmpty) publish(  SentinelUpdates(ssrs))

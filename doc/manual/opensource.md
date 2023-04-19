@@ -1,23 +1,23 @@
 # Why is ODIN-fire Open Sourced
 
-There are three types of stakeholder categories
+ODIN assumes two general categories of stakeholders: providers and users.
 
-  * agencies (fire, land management, local/state/federal government etc.)
-  * research organizations
-  * companies with wildland fire related products and services
+Provider stakeholders are sub-categorized into
 
-This means the stakeholder community is larger than "just" fire agencies, of which there already are hundreds. The goal is
-to provide some common ground for the whole stakeholder community with a low barrier of entry for everybody.
+  * ODIN maintainers - focused on the framework and common infrastructure
+  * vendors - commercial entities that create open or closed components for ODIN, including interfaces to connect/use proprietary devices and services
+  * research organizations - producing components that make their research topics available in ODIN applications
 
-<img class="center scale60" src="images/odin-open.svg">
+<img class="center scale60" src="images/open-source.svg">
+  
+User stakeholders are more than just fire agencies. This category also includes communities and commercial or government entities that operate fire detection and threat modeling systems to protect their (local) assets. What is common between user stakeholders is their general focus on improved situational awareness, which requires access to a broad range of external and internal data, potentially including low latency (tracking) information.
 
-This does not mean that all applications built with ODIN-fire have to be public, and it especially does not mean that
-ODIN-fire based components developed by 3rd parties (e.g. vendors) have to be open sourced. ODIN-fire (like the rest of 
-[RACE](http://nasarace.github.io/race/) is published under [Apache_License_v2](https://www.apache.org/licenses/LICENSE-2.0) 
-and hence supports to develop closed, commercial software on top of it.
+There are three conclusions to draw from this stakeholder variety:
 
-The goal is that no stakeholder has to develop from scratch, and that - from a technical point of view - new 3rd party 
-components/services can easily be integrated by other stakeholders. To that end ODIN-fire itself is open sourced and royalty free.
+  * there is an open number of potential applications
+  * inter-operability between those applications is relevant
+  * most user stakeholder organizations lack the resources to create and maintain their own framework systems
 
-Of course every individual or organization that wants to add to the public basis is more than welcome to become an
-ODIN-fire contributor. Our ultimate goal is a synergetic community to tackle the increasingly hard problem of wildland fire management.
+ODIN-fire is aimed at providing a common, open sourced framework that is available to all stakeholders so that no one has to develop their applications from scratch. To that end ODIN-fire itself is published under [Apache_License_v2](https://www.apache.org/licenses/LICENSE-2.0) and can be distributed free of royalties.
+
+This does not mean that all ODIN-fire applicatins and components have to be public. The license allows stakeholders to create and sell commercial (closed source) components and services. However, the over-arching goal for ODIN-fire is to bundle and save efforts in the wildland fire stakeholder community by creating a common basis for all its members. 
