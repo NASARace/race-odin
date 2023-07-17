@@ -48,6 +48,13 @@ var sentinelGpsView = undefined;
 
 var maxHistory = config.sentinel.maxHistory;
 
+let diagnosticCommands = new Map([
+    ["trigger alert", triggerAlertCmd], 
+    ["turn lights on", turnLightsOnCmd], 
+    ["turn lights off", turnLightsOffCmd],
+
+]);
+
 class SentinelAssets {
     constructor(symbol, details) {
         this.symbol = symbol; // billboard
@@ -166,33 +173,79 @@ class SentinelEntry {
     }
 }
 
+//--- module initialization
 
-ui.registerLoadFunction(function initialize() {
-    uiCesium.addDataSource(sentinelDataSource);
-    sentinelView = initSentinelView();
+uiCesium.addDataSource(sentinelDataSource);
 
-    sentinelImageView = initSentinelImagesView();
-    sentinelAccelView = initSentinelAccelView();
-    sentinelAnemoView = initSentinelAnemoView();
-    sentinelThermoView = initSentinelThermoView();
-    sentinelFireView = initSentinelFireView();
-    sentinelSmokeView = initSentinelSmokeView();
-    sentinelGasView = initSentinelGasView();
-    sentinelVocView = initSentinelVocView();
-    sentinelGpsView = initSentinelGpsView();
+createIcon();
+createWindow();
+sentinelView = initSentinelView();
 
-    initSentinelCmdList();
+sentinelImageView = initSentinelImagesView();
+sentinelAccelView = initSentinelAccelView();
+sentinelAnemoView = initSentinelAnemoView();
+sentinelThermoView = initSentinelThermoView();
+sentinelFireView = initSentinelFireView();
+sentinelSmokeView = initSentinelSmokeView();
+sentinelGasView = initSentinelGasView();
+sentinelVocView = initSentinelVocView();
+sentinelGpsView = initSentinelGpsView();
 
-    uiCesium.setEntitySelectionHandler(sentinelSelection);
-    ws.addWsHandler(config.wsUrl, handleWsSentinelMessages);
+initSentinelCmdList();
 
-    uiCesium.initLayerPanel("sentinel", config.sentinel, showSentinels);
-    console.log("ui_cesium_sentinel initialized");
-});
+uiCesium.setEntitySelectionHandler(sentinelSelection);
+ws.addWsHandler(handleWsSentinelMessages);
+
+uiCesium.initLayerPanel("sentinel", config.sentinel, showSentinels);
+console.log("ui_cesium_sentinel initialized");
+
+
+function createIcon() {
+    return ui.Icon("sentinel-icon.svg", (e)=> ui.toggleWindow(e,'sentinel'));
+}
+
+function createWindow() {
+    let maxDataRows = 8;
+
+    return ui.Window("Sentinels", "sentinel", "sentinel-icon.svg")(
+        ui.LayerPanel("sentinel", toggleShowSentinels),
+        ui.List("sentinel.list", 10, selectSentinel,null,null,zoomToSentinel),
+        ui.Panel("data", true)(
+            ui.TabbedContainer()(
+                ui.Tab("fire", false)( ui.List("sentinel.fire.list", maxDataRows)),
+                ui.Tab("smoke", false)( ui.List("sentinel.smoke.list", maxDataRows)),
+                ui.Tab("imgs", true)( ui.List("sentinel.image.list", maxDataRows, selectImage)),
+                ui.Tab("gas", false)( ui.List("sentinel.gas.list", maxDataRows)),
+                ui.Tab("temp", false)( ui.List("sentinel.thermo.list", maxDataRows)),
+                ui.Tab("wind", false)( ui.List("sentinel.anemo.list", maxDataRows)),
+                ui.Tab("voc", false)( ui.List("sentinel.voc.list", maxDataRows)),
+                ui.Tab("accel", false)( ui.List("sentinel.accel.list", maxDataRows)),
+                ui.Tab("gps",false)( ui.List("sentinel.gps.list", maxDataRows))
+            )
+        ),
+        ui.Panel("diagnostics", false)(
+            ui.List("sentinel.diag.cmdList", 6, selectSentinelCmd),
+            ui.ColumnContainer()(
+                ui.TextArea( "sentinel.diag.cmd", 44, 4, 0, true)
+            ),
+            ui.RowContainer()(
+                ui.Button("send", sendSentinelCmd),
+                ui.Button("clear history", clearSentinelHistory)
+            ),
+            ui.ColumnContainer()(
+                ui.TextArea( "sentinel.diag.log", 44, 4, 0, true, true)
+            )
+        )
+    );
+}
 
 function showSentinels (cond) {
     sentinelEntries.forEach( e=> e.showAssets(cond));
     uiCesium.requestRender();
+}
+
+function toggleShowSentinels(event) {
+    showPrimitives(ui.isCheckBoxSelected(event.target));
 }
 
 function initSentinelView() {
@@ -300,17 +353,6 @@ function initSentinelImagesView() {
     ]);
 }
 
-function initSentinelCmdList() {
-    let view = ui.getList("sentinel.diag.cmdList");
-    if (view) {
-        ui.setListItemDisplayColumns( view, ["fit"], [
-            { name: "template", tip: "name of command to instantiate", width: "26rem", attrs:[], map: e => e }
-        ]);
-
-        ui.setListItems(view, Array.from(diagnosticCommands.keys()));
-    }
-}
-
 function toggleShowImage(event) {
     let cb = ui.getCheckBox(event.target);
     if (cb) {
@@ -336,6 +378,17 @@ function toggleShowImage(event) {
                 }, 0);
             }
         }
+    }
+}
+
+function initSentinelCmdList() {
+    let view = ui.getList("sentinel.diag.cmdList");
+    if (view) {
+        ui.setListItemDisplayColumns( view, ["fit"], [
+            { name: "template", tip: "name of command to instantiate", width: "26rem", attrs:[], map: e => e }
+        ]);
+
+        ui.setListItems(view, Array.from(diagnosticCommands.keys()));
     }
 }
 
@@ -545,7 +598,7 @@ function updateDetails (se) {
     }
 }
 
-ui.exportToMain(function selectSentinel(event) {
+function selectSentinel(event) {
     let e = event.detail.curSelection;
     if (e) {
         selectedSentinelEntry = e;
@@ -555,9 +608,9 @@ ui.exportToMain(function selectSentinel(event) {
         selectedSentinelEntry = undefined;
         clearDataViews();
     }
-});
+}
 
-ui.exportToMain(function zoomToSentinel(event) {
+function zoomToSentinel(event) {
     let lv = ui.getList(event);
     if (lv) {
         let se = ui.getSelectedListItem(lv);
@@ -567,7 +620,7 @@ ui.exportToMain(function zoomToSentinel(event) {
             uiCesium.setSelectedEntity(se.assets.symbol);
         }
     }
-});
+}
 
 function setDataViews(sentinel) {
     ui.setListItems(sentinelImageView, sentinel.image);
@@ -593,23 +646,16 @@ function clearDataViews() {
     ui.clearList(sentinelGpsView);
 }
 
-ui.exportToMain(function selectImage(event) {
+function selectImage(event) {
     let e = event.detail.curSelection;
     if (e) {
         if (e.window) {
             ui.raiseWindowToTop(e.window);
         }
     }
-});
+}
 
 //--- diagnostics
-
-let diagnosticCommands = new Map([
-    ["trigger alert", triggerAlertCmd], 
-    ["turn lights on", turnLightsOnCmd], 
-    ["turn lights off", turnLightsOffCmd],
-
-]);
 
 function triggerAlertCmd() {
     return `{"event": "trigger-alert",\n  "data":{ "deviceIds": ["$DEVICE"]}}`;
@@ -623,7 +669,7 @@ function turnLightsOffCmd() {
     return `{"event": "switch-lights",\n  "data":{ "subject": "external-lights",\n  "state": "off",\n     "deviceIds": ["$DEVICE"]}}`;
 }
 
-ui.exportToMain(function selectSentinelCmd(event) {
+function selectSentinelCmd(event) {
     let cmdDescr = ui.getSelectedListItem(event.target);
 
     let cmdFunc = diagnosticCommands.get(cmdDescr);
@@ -635,7 +681,7 @@ ui.exportToMain(function selectSentinelCmd(event) {
     } else {
         console.log("ignoring unknown command: ", cmdDescr);
     }
-});
+}
 
 function resolveCmdVariables(cmd) {
     if (cmd.includes("$DEVICE")) {
@@ -649,7 +695,7 @@ function resolveCmdVariables(cmd) {
     return cmd;
 }
 
-ui.exportToMain(function sendSentinelCmd() {
+function sendSentinelCmd() {
     let cmd = ui.getTextAreaContent("sentinel.diag.cmd");
     if (cmd){
         cmd = resolveCmdVariables(cmd);
@@ -664,12 +710,11 @@ ui.exportToMain(function sendSentinelCmd() {
             alert("malformed command: ", error);
         }
     }
-});
+}
 
-ui.exportToMain(function clearSentinelHistory() {
+function clearSentinelHistory() {
     ui.setTextAreaContent("sentinel.diag.log", null);
-});
-
+}
 
 function logResponse (response) {
     if (response) {

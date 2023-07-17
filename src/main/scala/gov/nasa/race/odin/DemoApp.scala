@@ -17,11 +17,11 @@
 package gov.nasa.race.odin
 
 import com.typesafe.config.Config
-import gov.nasa.race.cesium.{CesiumBldgRoute, CesiumGoesrRoute, CesiumGpsRoute, CesiumHotspotRoute, CesiumJpssRoute, CesiumLayerRoute, CesiumTrackRoute, CesiumWindRoute, GeoLayerRoute, ImageryLayerRoute}
+import gov.nasa.race.cesium._
 import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http.DocumentRoute
+import gov.nasa.race.odin.sentinel.SentinelService
 import gov.nasa.race.ui.UiSettingsRoute
-import gov.nasa.race.odin.sentinel.SentinelRoute
 
 /**
  * the aggregation of micro-services we provide under the configured URL
@@ -30,10 +30,10 @@ class DemoApp(val parent: ParentActor, val config: Config)
          extends DocumentRoute
            with UiSettingsRoute
            with CesiumBldgRoute
-           with ImageryLayerRoute
-           with GeoLayerRoute
-           with CesiumWindRoute
-           with CesiumGoesrRoute
-           with CesiumJpssRoute
-           with SentinelRoute
-           with CesiumTrackRoute
+           with ImageryLayerService
+           with GeoLayerService
+           with WindFieldService
+           with GoesrService
+           with JpssService
+           with SentinelService
+           with TrackService
