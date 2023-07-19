@@ -31,6 +31,7 @@ class DemoApp(val parent: ParentActor, val config: Config)
            with UiSettingsRoute
            with CesiumBldgRoute
            with ImageryLayerService
+           with FireHistoryService
            with GeoLayerService
            with WindFieldService
            with GoesrService

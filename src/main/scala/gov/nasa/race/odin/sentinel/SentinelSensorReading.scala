@@ -47,6 +47,7 @@ object SentinelSensorReading {
   val FIRE = asc("fire"); val PROB = asc("fireProb")
   val IMAGE = asc("image"); val FILENAME = asc("filename"); val IS_INFRARED = asc("isInfrared"); val CONF_NO = asc("confNo")
   val SMOKE = asc("smoke"); val SMOKE_PROB = asc("smokeProb")
+  val ORIENTATION_RECORD = asc("orientationRecord")
 
   val IMAGE_PREFIX = "image"
   val DefaultImageDir = s"tmp/delphire/$IMAGE_PREFIX"
@@ -493,6 +494,7 @@ case class SentinelImageReading (deviceId: String, sensorNo: Int, recordId: Stri
  *   "filename": "./__image/e3bd4676-9d97-417b-9c6ec7295a96e470.webp",
  *   "isInfrared": true,
  *   "confNo": null
+ *   "orientationRecord": {..}     // ignored for now
  *  }
  */
 trait SentinelImageParser extends UTF8JsonPullParser {
@@ -504,6 +506,7 @@ trait SentinelImageParser extends UTF8JsonPullParser {
       foreachMemberInCurrentObject {
         case FILENAME => fileName = FileUtils.filename(quotedValue.toString()) // we remove the path portion
         case IS_INFRARED => isInfrared = unQuotedValue.toBoolean
+        case ORIENTATION_RECORD => skipPastAggregate()  // TBD - ignored for now
         case _ => // confNo ?
       }
       if (fileName != null) Some(SentinelImageReading(deviceId, sensorNo, recordId,date, fileName, isInfrared)) else None

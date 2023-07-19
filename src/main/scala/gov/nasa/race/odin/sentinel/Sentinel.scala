@@ -47,6 +47,7 @@ object Sentinel {
   val EVENT = asc("event")
   val DEVICE_IDS = asc("deviceIds")
   val MESSAGE_ID = asc("messageId")
+  val ORIENTATION = asc("orientation")
 
   val MaxReadings = 10  // TODO - do we need per-sensor type limits and should it be configurable?
 }
@@ -201,6 +202,7 @@ class SentinelParser extends UTF8JsonPullParser
 
             case CLAIMS => skipPastAggregate()
             case EVIDENCE => skipPastAggregate()
+            case ORIENTATION => skipPastAggregate() // TBD
             case _ => // ignore other members
           }
         }
