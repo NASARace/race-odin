@@ -20,7 +20,7 @@ import akka.http.scaladsl.model.ContentType
 import gov.nasa.race.Dated
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{CharSeqByteSlice, JsonSerializable, JsonWriter, UTF8JsonPullParser}
-import gov.nasa.race.odin.sentinel.Sentinel.{DEVICE_ID, SENSOR_NO}
+import gov.nasa.race.odin.sentinel.Sentinel.{DEVICE_ID, ORIENTATION, SENSOR_NO}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Speed.MetersPerSecond
 import gov.nasa.race.uom.Temperature.{Celsius, UndefinedTemperature}
@@ -47,7 +47,13 @@ object SentinelSensorReading {
   val FIRE = asc("fire"); val PROB = asc("fireProb")
   val IMAGE = asc("image"); val FILENAME = asc("filename"); val IS_INFRARED = asc("isInfrared"); val CONF_NO = asc("confNo")
   val SMOKE = asc("smoke"); val SMOKE_PROB = asc("smokeProb")
+  val CLOUD_COVER = asc("cloudcover")
+
   val ORIENTATION_RECORD = asc("orientationRecord")
+  val ORIENTATION_W = asc("w")
+  val ORIENTATION_QX = asc("qx")
+  val ORIENTATION_QY = asc("qy")
+  val ORIENTATION_QZ = asc("qz")
 
   val IMAGE_PREFIX = "image"
   val DefaultImageDir = s"tmp/delphire/$IMAGE_PREFIX"
@@ -472,6 +478,85 @@ trait SentinelSmokeParser extends UTF8JsonPullParser {
       if (prob.isNaN) None else Some(SentinelSmokeReading(deviceId,sensorNo,recordId,date,prob))
     } else if (isNull) None
     else throw exception("expected smoke object value")
+  }
+}
+
+/**
+ * cloud cover reading
+ */
+case class SentinelCloudCoverReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, percent: Double) extends SentinelSensorReading {
+  def readingType = CLOUD_COVER
+
+  def serializeDataTo(w: JsonWriter): Unit = {
+    w.writeDoubleMember(SMOKE_PROB,percent)
+  }
+
+  def copyWithDate(newDate: DateTime): SentinelCloudCoverReading = copy(date = newDate)
+}
+
+/**
+ *  "cloudcover":{"cloudcover":93}
+ */
+trait SentinelCloudCoverParser extends UTF8JsonPullParser {
+  def parseCloudCoverValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelCloudCoverReading] = {
+    var percent: Double = Double.NaN
+    if (isInObject) {
+      foreachMemberInCurrentObject {
+        case CLOUD_COVER => percent = unQuotedValue.toDouble // TODO - should probably be 'percent'
+        case _ => // ignore
+      }
+      if (percent.isNaN) None else Some(SentinelCloudCoverReading(deviceId, sensorNo, recordId, date, percent))
+    } else if (isNull) None
+    else throw exception("expected cloudcover object value")
+  }
+}
+
+/**
+ * orientation reading
+ */
+case class SentinelOrientationReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, o_w: Double, qx: Double, qy: Double, qz: Double) extends SentinelSensorReading {
+
+  println(s"@@@ new orientation reading $this")
+  def readingType = ORIENTATION
+
+  def serializeDataTo(w: JsonWriter): Unit = {
+    w.writeDoubleMember(ORIENTATION_W, o_w)
+    w.writeDoubleMember(ORIENTATION_QX, qx)
+    w.writeDoubleMember(ORIENTATION_QY, qy)
+    w.writeDoubleMember(ORIENTATION_QZ, qz)
+  }
+
+  def copyWithDate(newDate: DateTime): SentinelOrientationReading = copy(date = newDate)
+}
+
+/**
+ *  "orientation": {
+      "w": 0.9743149280548096,
+      "qx": 0.10192948579788208,
+      "qy": -0.14123816788196564,
+      "qz": -0.14273303747177124
+     }
+ */
+trait SentinelOrientationParser extends UTF8JsonPullParser {
+  def parseOrientationValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelOrientationReading] = {
+    var o_w: Double = Double.NaN
+    var qx: Double = Double.NaN
+    var qy: Double = Double.NaN
+    var qz: Double = Double.NaN
+
+    if (isInObject) {
+      foreachMemberInCurrentObject {
+        case ORIENTATION_W => o_w = unQuotedValue.toDouble
+        case ORIENTATION_QX => qx = unQuotedValue.toDouble
+        case ORIENTATION_QY => qy = unQuotedValue.toDouble
+        case ORIENTATION_QZ => qz = unQuotedValue.toDouble
+      }
+
+      if (deviceId.startsWith("c0f") )println(s"@@@ $deviceId: $o_w $qx $qy $qz")
+
+      if (o_w.isNaN || qx.isNaN || qy.isNaN || qz.isNaN) None else Some(SentinelOrientationReading(deviceId, sensorNo, recordId, date, o_w,qx,qy,qz))
+    } else if (isNull) None
+    else throw exception("expected orientation object value")
   }
 }
 

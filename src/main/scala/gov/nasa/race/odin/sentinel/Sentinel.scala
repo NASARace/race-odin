@@ -71,7 +71,9 @@ case class Sentinel (
                       anemo:  Seq[SentinelAnemoReading]  = Seq.empty,
                       fire:   Seq[SentinelFireReading]   = Seq.empty,
                       smoke:  Seq[SentinelSmokeReading]  = Seq.empty,
-                      images: Seq[SentinelImageReading]  = Seq.empty
+                      images: Seq[SentinelImageReading]  = Seq.empty,
+                      cloudcover: Seq[SentinelCloudCoverReading]  = Seq.empty,
+                      orientation: Seq[SentinelOrientationReading] = Seq.empty
                ) extends Dated with JsonSerializable {
 
   def serializeMembersTo (w: JsonWriter): Unit = {
@@ -90,6 +92,8 @@ case class Sentinel (
     serializeReadings(w, fire)
     serializeReadings(w, smoke)
     serializeReadings(w, images)
+    serializeReadings(w, cloudcover)
+    serializeReadings(w, orientation)
   }
 
   def serializeReadings(w: JsonWriter, rs: Seq[SentinelSensorReading]): Unit = {
@@ -116,6 +120,8 @@ case class Sentinel (
       case r: SentinelFireReading =>   copy( date= r.date, fire=    addReading(r, fire))
       case r: SentinelSmokeReading =>  copy( date= r.date, smoke=   addReading(r, smoke))
       case r: SentinelImageReading =>  copy( date= r.date, images=  addReading(r, images))
+      case r: SentinelCloudCoverReading => copy( date= r.date, cloudcover=  addReading(r, cloudcover))
+      case r: SentinelOrientationReading => copy( date= r.date, orientation=   addReading(r, orientation))
     }
   }
 
@@ -145,10 +151,10 @@ case class Sentinel (
 class SentinelParser extends UTF8JsonPullParser
     with SentinelAccelParser with SentinelAnemoParser with SentinelGasParser with SentinelMagParser with SentinelThermoParser
     with SentinelFireParser with SentinelGyroParser with SentinelVocParser with SentinelGpsParser
-    with SentinelSmokeParser with SentinelImageParser
+    with SentinelSmokeParser with SentinelImageParser with SentinelCloudCoverParser with SentinelOrientationParser
     with SentinelNotificationParser with SentinelCommandParser {
 
-  /* to debug parser exceptions:
+  /* to debug parser exceptions: */
   override def exception(msg: String): JsonParseException = {
     println("@@------------- JSON parse error")
     println(dataAsString)
@@ -156,7 +162,7 @@ class SentinelParser extends UTF8JsonPullParser
     Thread.dumpStack()
     new JsonParseException(msg)
   }
-  */
+  /**/
 
   def parseRecords(): Seq[SentinelSensorReading] = {
     val updates = ArrayBuffer.empty[SentinelSensorReading]
@@ -199,10 +205,11 @@ class SentinelParser extends UTF8JsonPullParser
             case VOC => appendSomeRecording( parseVocValue( deviceId, sensorId, recordId, timeRecorded))
             case SMOKE => appendSomeRecording( parseSmokeValue(deviceId, sensorId, recordId, timeRecorded))
             case IMAGE => appendSomeRecording( parseImageValue(deviceId, sensorId, recordId, timeRecorded))
+            case CLOUD_COVER => appendSomeRecording( parseCloudCoverValue(deviceId, sensorId, recordId, timeRecorded))
+            case ORIENTATION => appendSomeRecording( parseOrientationValue(deviceId, sensorId, recordId, timeRecorded))
 
             case CLAIMS => skipPastAggregate()
             case EVIDENCE => skipPastAggregate()
-            case ORIENTATION => skipPastAggregate() // TBD
             case _ => // ignore other members
           }
         }

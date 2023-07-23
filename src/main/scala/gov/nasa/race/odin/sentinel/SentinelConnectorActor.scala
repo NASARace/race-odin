@@ -44,6 +44,15 @@ import scala.util.{Success, Failure => FailureEx}
 class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
                        with SubscribingRaceActor with HttpActor with SyncWSAdapterActor with PeriodicRaceActor  {
 
+  trait PendingRecordRequest {
+    def process(): Unit
+  }
+
+  // to sequentialize requests
+  case class InitialRecordsRequest(deviceId: String, sensorNo: Int, capability: String) extends PendingRecordRequest {
+    override def process(): Unit = requestInitialRecords(deviceId, sensorNo, capability)
+  }
+
   // not thread-safe, access only from actor thread
   class DeviceEntry (val deviceInfo: SentinelDeviceInfo) {
     var sensors: Map[Long,SentinelSensorInfo] = Map.empty  // sensorNo->sensorInfo (set during processSensors)
@@ -84,6 +93,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
   val devices: mutable.Map[String,DeviceEntry] = mutable.Map.empty
   var lastUpdate: DateTime = DateTime.UndefinedDateTime
 
+  val requestQueue: mutable.Queue[PendingRecordRequest] = mutable.Queue.empty // we need to process them sequentially
 
   //--- RaceActor interface
   override def handleMessage: Receive = handleSentinelRaceMessage.orElse( handleWsMessage)
@@ -239,11 +249,10 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
           de.sensors = Map.from( sensorInfos.map(si => si.sensorNo.toLong -> si))
           sensorInfos.foreach { si=>
             si.capabilities.foreach { capEntry =>
-              requestInitialRecords(deviceId, si.sensorNo, capEntry._1.toString)
+              requestQueue += InitialRecordsRequest(deviceId, si.sensorNo, capEntry._1.toString)
             }
           }
-
-          startScheduler // we are ready to poll (and check websocket connection)
+          processRequestQueue() // this sequentially processes requests
 
         case None => warning(s"ignoring sensor info for unknown device: ${msg.deviceId}")
       }
@@ -284,6 +293,16 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
     if (parser.initialize(msg.data)) {
       val ssrs = parser.parseRecords().filter(updateDevice)
       if (ssrs.nonEmpty) publish(  SentinelUpdates(ssrs))
+    }
+
+    processRequestQueue()
+  }
+
+  def processRequestQueue(): Unit = {
+    if (requestQueue.nonEmpty) {
+      requestQueue.dequeue().process()
+    } else {
+      if (!isSchedulerStarted && isReadyToSchedule) startScheduler // we are ready to poll (and check websocket connection)
     }
   }
 

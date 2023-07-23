@@ -537,6 +537,8 @@ function createSymbolAsset(sentinelEntry) {
             backgroundColor: config.sentinel.labelBackground,
             pixelOffset: config.sentinel.labelOffset,
             distanceDisplayCondition: config.sentinel.labelDC,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
         point: {
             pixelSize: config.sentinel.pointSize,
@@ -571,7 +573,9 @@ function createDetailAsset (sentinelEntry) {
             outlineColor: cfg.color,
             outlineWidth: 1,
             pixelOffset: cfg.infoOffset,
-            distanceDisplayCondition: cfg.infoDC
+            distanceDisplayCondition: cfg.infoDC,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
         }
     });
 
