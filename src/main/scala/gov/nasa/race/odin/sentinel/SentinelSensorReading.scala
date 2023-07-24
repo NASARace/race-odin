@@ -516,7 +516,6 @@ trait SentinelCloudCoverParser extends UTF8JsonPullParser {
  */
 case class SentinelOrientationReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, o_w: Double, qx: Double, qy: Double, qz: Double) extends SentinelSensorReading {
 
-  println(s"@@@ new orientation reading $this")
   def readingType = ORIENTATION
 
   def serializeDataTo(w: JsonWriter): Unit = {
@@ -539,22 +538,20 @@ case class SentinelOrientationReading (deviceId: String, sensorNo: Int, recordId
  */
 trait SentinelOrientationParser extends UTF8JsonPullParser {
   def parseOrientationValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelOrientationReading] = {
-    var o_w: Double = Double.NaN
+    var w: Double = Double.NaN
     var qx: Double = Double.NaN
     var qy: Double = Double.NaN
     var qz: Double = Double.NaN
 
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case ORIENTATION_W => o_w = unQuotedValue.toDouble
+        case ORIENTATION_W => w = unQuotedValue.toDouble
         case ORIENTATION_QX => qx = unQuotedValue.toDouble
         case ORIENTATION_QY => qy = unQuotedValue.toDouble
         case ORIENTATION_QZ => qz = unQuotedValue.toDouble
       }
 
-      if (deviceId.startsWith("c0f") )println(s"@@@ $deviceId: $o_w $qx $qy $qz")
-
-      if (o_w.isNaN || qx.isNaN || qy.isNaN || qz.isNaN) None else Some(SentinelOrientationReading(deviceId, sensorNo, recordId, date, o_w,qx,qy,qz))
+      if (w.isNaN || qx.isNaN || qy.isNaN || qz.isNaN) None else Some(SentinelOrientationReading(deviceId, sensorNo, recordId, date, w,qx,qy,qz))
     } else if (isNull) None
     else throw exception("expected orientation object value")
   }
