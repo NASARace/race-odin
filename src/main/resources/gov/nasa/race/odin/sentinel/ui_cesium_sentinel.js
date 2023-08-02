@@ -45,6 +45,8 @@ var sentinelAnemoView = undefined;
 var sentinelVocView = undefined;
 var sentinelAccelView = undefined;
 var sentinelGpsView = undefined;
+var sentinelOrientationView = undefined;
+var sentinelCloudCoverView = undefined;
 
 var maxHistory = config.sentinel.maxHistory;
 
@@ -79,6 +81,9 @@ class SentinelEntry {
         this.id = sentinel.deviceId;
         this.sentinel = sentinel;
         this.assets = null;
+
+        this.pos = this.position();
+        this.enuToEcef = Cesium.Transforms.eastNorthUpToFixedFrame(this.pos);
     }
 
     hasFire() {
@@ -122,23 +127,22 @@ class SentinelEntry {
         if (this.assets) this.assets.showAssets(cond);
     }
 
+    // this could look for the best DOP value
     position() {
         let gps = this.sentinel.gps;
         if (gps && gps.length > 0) {
-            let lat = gps[0].gps.latitude;
-            let lon = gps[0].gps.longitude;
-            return Cesium.Cartesian3.fromDegrees(lon, lat);
+            let r = gps[0].gps;
+            return Cesium.Cartesian3.fromDegrees(r.longitude, r.latitude, r.altitude);
         } else {
-            return Cesium.Cartesian3.fromDegrees(0, 0);  // TODO - we should move this out of sight
+            return Cesium.Cartesian3.fromDegrees(0, 0, 0);  // TODO - we should move this out of sight
         }
     }
 
     lastCartographic (height=0.0) {
         let gps = this.sentinel.gps;
         if (gps && gps.length > 0) {
-            let lat = util.toRadians(gps[0].gps.latitude);
-            let lon = util.toRadians(gps[0].gps.longitude);
-            return new Cesium.Cartographic(lon,lat,height);
+            let r = gps[0].gps;
+            return new Cesium.Cartographic(util.toRadians(r.longitude),util.toRadians(r.latitude),r.altitude);
         } else {
             return null;
         }
@@ -173,6 +177,74 @@ class SentinelEntry {
     }
 }
 
+// object for computation of image viewing angle display
+const imgVector = {
+    entity: undefined,
+    vec: [new Cesium.Cartesian3(), new Cesium.Cartesian3()],
+    clr: config.sentinel.color,
+    sensor: undefined,
+
+    // temp vars we allocate only once
+    p1Body: Cesium.Cartesian3.fromElements( 0, 500, 0), // forward in body frame 
+    p1Enu: new Cesium.Cartesian3(),
+    p1Ecef: new Cesium.Cartesian3(),
+
+    setViewVector (sentinelEntry, imageRecord) {
+        let cfg = config.sentinel;
+        let image = imageRecord.image;
+        this.sensor = imageRecord.sensorNo.toString();
+
+        let p1Enu = Cesium.Matrix3.multiplyByVector(image.bodyToEnu, this.p1Body, this.p1Enu);
+        let p1Ecef = Cesium.Matrix4.multiplyByPoint(sentinelEntry.enuToEcef, p1Enu, this.p1Ecef);
+
+        this.vec[0] = sentinelEntry.pos;
+        this.vec[1] = p1Ecef;
+        this.clr = sentinelEntry.hasFire() ? cfg.alertColor : cfg.color;
+    },
+
+    show (cond) {
+        if (cond) {
+            if (!this.entity) {
+                let cfg = config.sentinel;
+
+                let colorProperty = new Cesium.ColorMaterialProperty();
+                colorProperty.color = new Cesium.CallbackProperty( () => this.clr, false);
+
+                this.entity = new Cesium.Entity({
+                    position: new Cesium.CallbackProperty( () => this.p1Ecef), // this is apparently just working by accident
+                    label: {
+                        text: new Cesium.CallbackProperty( () => this.sensor),
+                        font: cfg.labelFont,
+                        scale: 0.8,
+                        horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                        verticalOrigin: Cesium.VerticalOrigin.TOP,
+                        pixelOffset: cfg.labelOffset,
+                        fillColor: colorProperty
+                    },
+                    polyline: {
+                        positions: new Cesium.CallbackProperty( () => this.vec, false),
+                        material: colorProperty,
+                    }
+                });
+                uiCesium.addEntity(this.entity);
+            }
+        }
+        if (this.entity) {
+            this.entity.show = cond;
+            uiCesium.requestRender();
+        }
+    },
+
+    showViewVector (sentinelEntry,imageRecord) {
+        if (sentinelEntry && imageRecord.image.orientation) {
+            this.setViewVector(sentinelEntry, imageRecord);
+            this.show(true);
+        } else {
+            this.show(false);
+        }
+    }
+};
+
 //--- module initialization
 
 uiCesium.addDataSource(sentinelDataSource);
@@ -190,6 +262,8 @@ sentinelSmokeView = initSentinelSmokeView();
 sentinelGasView = initSentinelGasView();
 sentinelVocView = initSentinelVocView();
 sentinelGpsView = initSentinelGpsView();
+sentinelOrientationView = initSentinelOrientationView();
+sentinelCloudCoverView = initSentinelCloudCoverView();
 
 initSentinelCmdList();
 
@@ -218,9 +292,11 @@ function createWindow() {
                 ui.Tab("gas", false)( ui.List("sentinel.gas.list", maxDataRows)),
                 ui.Tab("temp", false)( ui.List("sentinel.thermo.list", maxDataRows)),
                 ui.Tab("wind", false)( ui.List("sentinel.anemo.list", maxDataRows)),
+                ui.Tab("cloud", false)( ui.List("sentinel.cloudcover.list", maxDataRows)),
                 ui.Tab("voc", false)( ui.List("sentinel.voc.list", maxDataRows)),
                 ui.Tab("accel", false)( ui.List("sentinel.accel.list", maxDataRows)),
-                ui.Tab("gps",false)( ui.List("sentinel.gps.list", maxDataRows))
+                ui.Tab("gps",false)( ui.List("sentinel.gps.list", maxDataRows)),
+                ui.Tab("att", false)( ui.List("sentinel.orientation.list", maxDataRows))
             )
         ),
         ui.Panel("diagnostics", false)(
@@ -337,8 +413,31 @@ function initSentinelAccelView() {
 function initSentinelGpsView() {
     return initListView( "sentinel.gps.list", [
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
-        { name: "lat", tip: "latitude", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.latitude) },
-        { name: "lon", tip: "longitude", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.longitude) },
+        { name: "lat", tip: "latitude [°]", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.latitude) },
+        { name: "lon", tip: "longitude [°]", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(e.gps.longitude) },
+        { name: "alt", tip: "altitude [m]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.gps.altitude) },
+        ui.listItemSpacerColumn(),
+        { name: "hdop", tip: "horizontal dilution of precision", width: "2rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.gps.HDOP) },
+        { name: "q", tip: "quality", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.gps.quality },
+        { name: "n", tip: "number of satellites", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.gps.numberOfSatellites },
+        ui.listItemSpacerColumn(),
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
+    ]);  
+}
+function initSentinelOrientationView() {
+    return initListView( "sentinel.orientation.list", [
+        { name: "sen", tip: "sensor number", width: "3rem", attrs: [], map: e => e.sensorNo },
+        { name: "hdg", tip: "view direction [°]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(0.0) },
+        { name: "pitch", tip: "view tilt [°]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(0.0) },
+        { name: "roll", tip: "view rotation [°]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_5.format(0.0) }, 
+        ui.listItemSpacerColumn(),
+        { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
+    ]);  
+}
+function initSentinelCloudCoverView() {
+    return initListView( "sentinel.cloudcover.list", [
+        { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
+        { name: "cc", tip: "cloud coverage [%]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(0.0) },
         ui.listItemSpacerColumn(),
         { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);  
@@ -348,9 +447,20 @@ function initSentinelImagesView() {
         { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.window, toggleShowImage, null) },
         { name: "sen", tip: "sensor number", width: "2rem", attrs: [], map: e => e.sensorNo },
         { name: "type", tip: "ir: infrared, vis: visible", width: "2rem", attrs: [], map: e => e.image.isInfrared ? "ir" : "vis" },
+        { name: "hdg", tip: "heading [°]", width: "3rem", attrs: ["fixed", "alignRight"], map: e => imageHeading(e.image) }, 
         ui.listItemSpacerColumn(),
         { name: "date", width: "9rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMSString(e.timeRecorded) }
     ]);
+}
+
+function imageHeading (image) {
+    if (image.hpr) {
+        let hdg = Cesium.Math.toDegrees(-image.hpr.heading);
+        if (hdg < 0) hdg = 360 + hdg;
+        return util.f_0.format(hdg);
+    } else {
+        return "-";
+    }
 }
 
 function toggleShowImage(event) {
@@ -363,7 +473,7 @@ function toggleShowImage(event) {
                 e.window = null;
             } else {
                 setTimeout(() => { // otherwise the mouseUp will put the focus back on sentinelsView
-                    let w = ui.createWindow(e.image.filename, false, () => {
+                    let w = ui.createWindow( imageTitle(e), false, () => {
                         e.window = undefined;
                         ui.updateListItem(sentinelImageView, e);
                     });
@@ -378,6 +488,14 @@ function toggleShowImage(event) {
                 }, 0);
             }
         }
+    }
+}
+
+function imageTitle (e) {
+    if (e.image) {
+        return `sensor: ${e.sensorNo}  │  date: ${util.toLocalMDHMString(e.timeRecorded)}  │  heading: ${imageHeading(e.image)}°`;
+    } else {
+        return "?"
     }
 }
 
@@ -428,6 +546,10 @@ function addSentinelEntry(sentinel) {
     let idx = sentinelList.insert(e);
     ui.insertListItem(sentinelView, e, idx);
 
+    if (sentinel.image) {
+        sentinel.image.forEach( ir=> setImageOrientation(ir.image));
+    }
+
     if (sentinel.gps) e.assets = createAssets(e);
     checkFireAsset(e);
 }
@@ -445,7 +567,10 @@ function handleSentinelUpdatesMessage(sentinelUpdates) {
                 checkFireAsset(e);
             }
             else if (r.smoke) updateSentinelReadings(e, 'smoke', r, sentinelSmokeView);
-            else if (r.image) updateSentinelReadings(e, 'image', r, sentinelImageView);
+            else if (r.image) {
+                setImageOrientation(r.image);
+                updateSentinelReadings(e, 'image', r, sentinelImageView);
+            }
             else if (r.anemometer) {
                 updateSentinelReadings(e, 'anemometer', r, sentinelAnemoView);
                 updateDetails(e);
@@ -461,10 +586,25 @@ function handleSentinelUpdatesMessage(sentinelUpdates) {
                 updateSentinelReadings(e, 'thermometer', r, sentinelThermoView);
                 updateDetails(e);
             }
+            else if (r.orientation) {
+                updateSentinelReadings(e, 'orientation', r, sentinelOrientationView);
+                updateDetails(e);
+            }
+            else if (r.cloudcover) { updateSentinelReadings(e, 'cloudcover', r, sentinelCloudCoverView); }
         }
     });
 }
 
+function setImageOrientation (image) {
+    if (image.orientation) {
+        let o = image.orientation;
+        let q = new Cesium.Quaternion(o.qx, o.qy, o.qz, o.w);
+        let qRot = Cesium.Quaternion.inverse(q, new Cesium.Quaternion());
+
+        image.bodyToEnu = Cesium.Matrix3.fromQuaternion( qRot);
+        image.hpr = Cesium.HeadingPitchRoll.fromQuaternion(q);
+    }
+}
 
 function updateSentinelReadings (sentinelEntry, memberName, newReading, view) {
     let sentinel = sentinelEntry.sentinel;
@@ -519,12 +659,12 @@ function createSymbolAsset(sentinelEntry) {
 
     let entity = new Cesium.Entity({
         id: sentinel.deviceId,
-        position: sentinelEntry.position(),
+        position: sentinelEntry.pos,
         billboard: {
             image: 'sentinel-asset/sentinel',
             distanceDisplayCondition: config.sentinel.billboardDC,
             color: config.sentinel.color,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            //heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
         },
         label: {
             text: sentinel.deviceName,
@@ -560,7 +700,7 @@ function createDetailAsset (sentinelEntry) {
 
     let entity = new Cesium.Entity({
         id: sentinelEntry.id + "-info",
-        position: sentinelEntry.position(),
+        position: sentinelEntry.pos,
         label: {
             text: sentinelInfoText(sentinelEntry),
             font: cfg.infoFont,
@@ -596,7 +736,7 @@ function sentinelInfoText (se) {
 }
 
 function updateDetails (se) {
-    if (se.assets.details){
+    if (se.assets && se.assets.details){
         se.assets.details.label.text = sentinelInfoText(se);
         uiCesium.requestRender();
     }
@@ -656,7 +796,9 @@ function selectImage(event) {
         if (e.window) {
             ui.raiseWindowToTop(e.window);
         }
-    }
+
+        imgVector.showViewVector(selectedSentinelEntry, e);
+    } else imgVector.show(false);
 }
 
 //--- diagnostics

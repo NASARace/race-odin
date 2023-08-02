@@ -433,7 +433,7 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
         fireImage match {
           case Some(fileName) =>
             info(s"simulating fire with image $fileName at $date")
-            val imgReading = SentinelImageReading(deviceId,sensorNo,"42", date, fileName, false)
+            val imgReading = SentinelImageReading(deviceId,sensorNo,"42", date, fileName, false, None)
             publish( SentinelUpdates( Seq(imgReading)))
 
             val fireReading = SentinelFireReading(deviceId,sensorNo,"43", date + Seconds(5), 0.942)

@@ -1,7 +1,7 @@
 // example build configuration for projects using RACE
 
 name := "race-odin"
-scalaVersion := "2.13.10"
+scalaVersion := "2.13.11"
 
 enablePlugins(LaikaPlugin) // optional - to generate website and slides
 

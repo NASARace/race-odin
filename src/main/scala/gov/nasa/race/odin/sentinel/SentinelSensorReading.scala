@@ -17,14 +17,15 @@
 package gov.nasa.race.odin.sentinel
 
 import akka.http.scaladsl.model.ContentType
-import gov.nasa.race.Dated
+import gov.nasa.race.{Dated, ifSome}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{CharSeqByteSlice, JsonSerializable, JsonWriter, UTF8JsonPullParser}
+import gov.nasa.race.common.{CharSeqByteSlice, JsonSerializable, JsonWriter, Quaternion, UTF8JsonPullParser}
 import gov.nasa.race.odin.sentinel.Sentinel.{DEVICE_ID, ORIENTATION, SENSOR_NO}
 import gov.nasa.race.uom.Angle.Degrees
+import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.uom.Speed.MetersPerSecond
 import gov.nasa.race.uom.Temperature.{Celsius, UndefinedTemperature}
-import gov.nasa.race.uom.{Angle, DateTime, Speed, Temperature}
+import gov.nasa.race.uom.{Angle, DateTime, Length, Speed, Temperature}
 import gov.nasa.race.util.FileUtils
 
 object SentinelSensorReading {
@@ -48,6 +49,11 @@ object SentinelSensorReading {
   val IMAGE = asc("image"); val FILENAME = asc("filename"); val IS_INFRARED = asc("isInfrared"); val CONF_NO = asc("confNo")
   val SMOKE = asc("smoke"); val SMOKE_PROB = asc("smokeProb")
   val CLOUD_COVER = asc("cloudcover")
+  val PERCENT = asc("percent")
+  val ALTITUDE = asc("altitude")
+  val HDOP = asc("HDOP")
+  val QUALITY = asc("quality")
+  val NOS = asc("numberOfSatellites")
 
   val ORIENTATION_RECORD = asc("orientationRecord")
   val ORIENTATION_W = asc("w")
@@ -116,12 +122,18 @@ case class SentinelUpdates (readings: Seq[SentinelSensorReading]) extends JsonSe
 
 //--- the sentinel sensor reading types
 
-case class SentinelGpsReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, lat: Angle, lon: Angle) extends SentinelSensorReading {
+case class SentinelGpsReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime,
+                               lat: Angle, lon: Angle, alt: Length,
+                               hdop: Double, quality: Int, numberOfSatellites: Int) extends SentinelSensorReading {
   def readingType = GPS
 
   def serializeDataTo(w: JsonWriter): Unit = {
     w.writeDoubleMember(LAT, lat.toDegrees)
     w.writeDoubleMember(LON, lon.toDegrees)
+    w.writeDoubleMember(ALTITUDE, alt.toMeters)
+    w.writeDoubleMember(HDOP, hdop)
+    w.writeIntMember(NOS, numberOfSatellites)
+    w.writeIntMember(QUALITY, quality)
   }
 
   def copyWithDate(newDate: DateTime): SentinelGpsReading = copy(date = newDate)
@@ -132,20 +144,34 @@ case class SentinelGpsReading (deviceId: String, sensorNo: Int, recordId: String
             {
                 "latitude": 37.328366705311865,
                 "longitude": -122.10084539864475,
-                "recordId": 1065930
+                "altitude": 123,
+                "HDOP": 1.23,
+                "numberOfSatellites": 42,
+                "quality": 1
             },
  */
 trait SentinelGpsParser extends UTF8JsonPullParser {
   def parseGpsValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelGpsReading] = {
     var lat = Angle.UndefinedAngle
     var lon = Angle.UndefinedAngle
+    var alt = Meters(0)
+    var hdop = 0.0
+    var nos = 0
+    var quality = 0
+
     if (isInObject) {
       foreachMemberInCurrentObject {
         case LAT => lat = Degrees(unQuotedValue.toDouble).toNormalizedLatitude
         case LON => lon = Degrees(unQuotedValue.toDouble).toNormalizedLongitude
-        case _ => // ignore other members
+        // those should not be optional
+        case ALTITUDE if !isNull => alt = Meters(unQuotedValue.toDouble)
+        case HDOP if !isNull => hdop = unQuotedValue.toDouble
+        case NOS if !isNull => nos = unQuotedValue.toInt
+        case QUALITY if !isNull => quality = unQuotedValue.toInt
+
+        case _ => // ignore other members for now
       }
-      Some(SentinelGpsReading(deviceId,sensorNo,recordId,date,lat,lon))
+      Some(SentinelGpsReading(deviceId,sensorNo,recordId,date,lat,lon,alt,hdop,quality,nos))
     } else if (isNull) None
     else throw exception("expected object value")
   }
@@ -488,7 +514,7 @@ case class SentinelCloudCoverReading (deviceId: String, sensorNo: Int, recordId:
   def readingType = CLOUD_COVER
 
   def serializeDataTo(w: JsonWriter): Unit = {
-    w.writeDoubleMember(SMOKE_PROB,percent)
+    w.writeDoubleMember(PERCENT,percent)
   }
 
   def copyWithDate(newDate: DateTime): SentinelCloudCoverReading = copy(date = newDate)
@@ -502,7 +528,7 @@ trait SentinelCloudCoverParser extends UTF8JsonPullParser {
     var percent: Double = Double.NaN
     if (isInObject) {
       foreachMemberInCurrentObject {
-        case CLOUD_COVER => percent = unQuotedValue.toDouble // TODO - should probably be 'percent'
+        case PERCENT => percent = unQuotedValue.toDouble // TODO - should probably be 'percent'
         case _ => // ignore
       }
       if (percent.isNaN) None else Some(SentinelCloudCoverReading(deviceId, sensorNo, recordId, date, percent))
@@ -538,20 +564,25 @@ case class SentinelOrientationReading (deviceId: String, sensorNo: Int, recordId
  */
 trait SentinelOrientationParser extends UTF8JsonPullParser {
   def parseOrientationValue(deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelOrientationReading] = {
+    parseQuaternion().map { q=>
+      SentinelOrientationReading( deviceId, sensorNo, recordId, date, q.w, q.qx, q.qy, q.qz)
+    }
+  }
+  // positioned in "orientation" value '.."orientation": { "w":.., "qx":.., "qy":.., "qz"::.. }'
+  def parseQuaternion() : Option[Quaternion] = {
     var w: Double = Double.NaN
-    var qx: Double = Double.NaN
-    var qy: Double = Double.NaN
-    var qz: Double = Double.NaN
+    var x: Double = Double.NaN
+    var y: Double = Double.NaN
+    var z: Double = Double.NaN
 
     if (isInObject) {
       foreachMemberInCurrentObject {
         case ORIENTATION_W => w = unQuotedValue.toDouble
-        case ORIENTATION_QX => qx = unQuotedValue.toDouble
-        case ORIENTATION_QY => qy = unQuotedValue.toDouble
-        case ORIENTATION_QZ => qz = unQuotedValue.toDouble
+        case ORIENTATION_QX => x = unQuotedValue.toDouble
+        case ORIENTATION_QY => y = unQuotedValue.toDouble
+        case ORIENTATION_QZ => z = unQuotedValue.toDouble
       }
-
-      if (w.isNaN || qx.isNaN || qy.isNaN || qz.isNaN) None else Some(SentinelOrientationReading(deviceId, sensorNo, recordId, date, w,qx,qy,qz))
+      if (w.isNaN || x.isNaN || y.isNaN || z.isNaN) None else Some( Quaternion(w, x, y, z))
     } else if (isNull) None
     else throw exception("expected orientation object value")
   }
@@ -560,12 +591,21 @@ trait SentinelOrientationParser extends UTF8JsonPullParser {
 /**
  * new "image" record
  */
-case class SentinelImageReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime, fileName: String, isInfrared: Boolean) extends SentinelSensorReading {
+case class SentinelImageReading (deviceId: String, sensorNo: Int, recordId: String, date: DateTime,
+                                 fileName: String, isInfrared: Boolean, orientation: Option[Quaternion]) extends SentinelSensorReading {
   def readingType = IMAGE
 
   def serializeDataTo(w: JsonWriter): Unit = {
     w.writeStringMember(FILENAME, s"$IMAGE_PREFIX/$fileName")
     w.writeBooleanMember(IS_INFRARED,isInfrared)
+    ifSome(orientation) { q=>
+      w.writeObjectMember(ORIENTATION) {w=>
+        w.writeDoubleMember(ORIENTATION_W, q.w)
+        w.writeDoubleMember(ORIENTATION_QX, q.qx)
+        w.writeDoubleMember(ORIENTATION_QY, q.qy)
+        w.writeDoubleMember(ORIENTATION_QZ, q.qz)
+      }
+    }
   }
 
   def copyWithDate(newDate: DateTime): SentinelImageReading = copy(date = newDate)
@@ -576,23 +616,33 @@ case class SentinelImageReading (deviceId: String, sensorNo: Int, recordId: Stri
  *   "filename": "./__image/e3bd4676-9d97-417b-9c6ec7295a96e470.webp",
  *   "isInfrared": true,
  *   "confNo": null
- *   "orientationRecord": {..}     // ignored for now
+ *   "orientationRecord": {..}     // we just extract the quaternion data from it
  *  }
  */
-trait SentinelImageParser extends UTF8JsonPullParser {
+trait SentinelImageParser extends UTF8JsonPullParser with SentinelOrientationParser {
   def parseImageValue (deviceId: String, sensorNo: Int, recordId: String, date: DateTime): Option[SentinelImageReading] = {
     var fileName: String = null
+    var orientation: Option[Quaternion] = None
     var isInfrared = false
 
     if (isInObject) {
       foreachMemberInCurrentObject {
         case FILENAME => fileName = FileUtils.filename(quotedValue.toString()) // we remove the path portion
         case IS_INFRARED => isInfrared = unQuotedValue.toBoolean
-        case ORIENTATION_RECORD => skipPastAggregate()  // TBD - ignored for now
+        case ORIENTATION_RECORD => orientation = parseCameraOrientationRecord()
         case _ => // confNo ?
       }
-      if (fileName != null) Some(SentinelImageReading(deviceId, sensorNo, recordId,date, fileName, isInfrared)) else None
+      if (fileName != null) Some(SentinelImageReading(deviceId, sensorNo, recordId,date, fileName, isInfrared, orientation)) else None
     } else if (isNull) None
     else throw exception("expected image object value")
+  }
+  // we are in the "orientationRecord" property
+  def parseCameraOrientationRecord (): Option[Quaternion] = {
+    var quaternion: Option[Quaternion] = None
+    foreachMemberInCurrentObject {
+      case ORIENTATION => quaternion = parseQuaternion()
+      case _ => // ignore all other orientationRecord properties
+    }
+    quaternion
   }
 }
