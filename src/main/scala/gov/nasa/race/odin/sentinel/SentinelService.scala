@@ -130,7 +130,7 @@ trait SentinelService extends  CesiumService with PushWSRaceRoute with PipedRace
   billboardDC: new Cesium.DistanceDisplayCondition( 0, $pointDist),
   imageWidth: ${cfg.getIntOrElse("img-width", 400)},
   maxHistory: ${cfg.getIntOrElse("max-history", 10)},
-  zoomHeight: ${cfg.getIntOrElse("zoom-height", 80000)}
+  zoomHeight: ${cfg.getIntOrElse("zoom-height", 20000)}
 };"""
     //... and more to follow
   }

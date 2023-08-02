@@ -35,6 +35,7 @@ var sentinelList = new SkipList( // id-sorted display list for trackEntryView
 );
 
 var selectedSentinelEntry = undefined;
+var selectedImage = undefined;
 
 var sentinelImageView = undefined;
 var sentinelFireView = undefined;
@@ -142,7 +143,7 @@ class SentinelEntry {
         let gps = this.sentinel.gps;
         if (gps && gps.length > 0) {
             let r = gps[0].gps;
-            return new Cesium.Cartographic(util.toRadians(r.longitude),util.toRadians(r.latitude),r.altitude);
+            return new Cesium.Cartographic(util.toRadians(r.longitude),util.toRadians(r.latitude),height);
         } else {
             return null;
         }
@@ -200,33 +201,53 @@ const imgVector = {
         this.vec[0] = sentinelEntry.pos;
         this.vec[1] = p1Ecef;
         this.clr = sentinelEntry.hasFire() ? cfg.alertColor : cfg.color;
+
+        if (this.entity) {
+            let e = this.entity;
+            e.position = this.p1Ecef;
+            e.label.text = this.sensor;
+            e.label.fillColor = this.clr;
+            e.polyline.positions = this.vec;
+            e.polyline.material = this.clr;
+        }
+    },
+
+    createEntity () {
+        // could use "CallbackProperty( () => this.xx, false)"" for position, label.text, polyline.positions
+        // (not we need a ColorMaterialProperty with a "p.color = new Cesium.CallbackProperty" for polyline.material) = but not label.fillColor
+        // Callbacks are more instantaneous but at cost of whole frame rendering
+
+        let cfg = config.sentinel;
+        let ddc = new Cesium.DistanceDisplayCondition(0, cfg.zoomHeight); // (we show a vector length of 500m)
+
+        return new Cesium.Entity({
+            position: this.p1Ecef,
+            label: {
+                text: this.sensor,
+                font: cfg.labelFont,
+                scale: 0.8,
+                horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                verticalOrigin: Cesium.VerticalOrigin.TOP,
+                pixelOffset: cfg.labelOffset,
+                fillColor: this.clr,
+                distanceDisplayCondition: ddc
+            },
+            polyline: {
+                positions: this.vec,
+                material: this.clr,
+                distanceDisplayCondition: ddc
+            }
+        });
     },
 
     show (cond) {
         if (cond) {
             if (!this.entity) {
-                let cfg = config.sentinel;
-
-                let colorProperty = new Cesium.ColorMaterialProperty();
-                colorProperty.color = new Cesium.CallbackProperty( () => this.clr, false);
-
-                this.entity = new Cesium.Entity({
-                    position: new Cesium.CallbackProperty( () => this.p1Ecef), // this is apparently just working by accident
-                    label: {
-                        text: new Cesium.CallbackProperty( () => this.sensor),
-                        font: cfg.labelFont,
-                        scale: 0.8,
-                        horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
-                        verticalOrigin: Cesium.VerticalOrigin.TOP,
-                        pixelOffset: cfg.labelOffset,
-                        fillColor: colorProperty
-                    },
-                    polyline: {
-                        positions: new Cesium.CallbackProperty( () => this.vec, false),
-                        material: colorProperty,
-                    }
-                });
-                uiCesium.addEntity(this.entity);
+                let entity = this.createEntity();
+                if (entity) {
+                    this.entity = entity;
+                    uiCesium.addEntity(entity);
+                }
             }
         }
         if (this.entity) {
@@ -236,7 +257,7 @@ const imgVector = {
     },
 
     showViewVector (sentinelEntry,imageRecord) {
-        if (sentinelEntry && imageRecord.image.orientation) {
+        if (sentinelEntry && imageRecord && imageRecord.image.orientation) {
             this.setViewVector(sentinelEntry, imageRecord);
             this.show(true);
         } else {
@@ -315,13 +336,15 @@ function createWindow() {
     );
 }
 
-function showSentinels (cond) {
+function showSentinels (cond) { // triggered by panel
+    if (imgVector.entity) imgVector.entity.show = cond;
     sentinelEntries.forEach( e=> e.showAssets(cond));
     uiCesium.requestRender();
 }
 
-function toggleShowSentinels(event) {
-    showPrimitives(ui.isCheckBoxSelected(event.target));
+
+function toggleShowSentinels(event) { // show action triggered by layer view (not panel)
+    // TBD
 }
 
 function initSentinelView() {
@@ -752,6 +775,8 @@ function selectSentinel(event) {
         selectedSentinelEntry = undefined;
         clearDataViews();
     }
+    selectedImage = null;
+    imgVector.show(false);
 }
 
 function zoomToSentinel(event) {
@@ -792,13 +817,17 @@ function clearDataViews() {
 
 function selectImage(event) {
     let e = event.detail.curSelection;
+    selectedImage = e;
+
     if (e) {
         if (e.window) {
             ui.raiseWindowToTop(e.window);
         }
-
         imgVector.showViewVector(selectedSentinelEntry, e);
-    } else imgVector.show(false);
+
+    } else {
+        imgVector.show(false);
+    }
 }
 
 //--- diagnostics
