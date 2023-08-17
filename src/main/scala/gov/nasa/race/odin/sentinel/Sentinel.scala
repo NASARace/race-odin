@@ -48,6 +48,7 @@ object Sentinel {
   val DEVICE_IDS = asc("deviceIds")
   val MESSAGE_ID = asc("messageId")
   val ORIENTATION = asc("orientation")
+  val TYPE = asc("type")
 
   val MaxReadings = 10  // TODO - do we need per-sensor type limits and should it be configurable?
 }
@@ -167,6 +168,7 @@ class SentinelParser extends UTF8JsonPullParser
   def parseRecords(): Seq[SentinelSensorReading] = {
     val updates = ArrayBuffer.empty[SentinelSensorReading]
     var recordId: String = null
+    var recordType: String = null
     var deviceId: String = null
     var sensorId = -1
     var timeRecorded = DateTime.UndefinedDateTime
@@ -184,6 +186,7 @@ class SentinelParser extends UTF8JsonPullParser
       case DATA =>
         foreachElementInCurrentArray {
           recordId = null
+          recordType = null
           deviceId = null
           sensorId = -1
           timeRecorded = DateTime.UndefinedDateTime
@@ -191,6 +194,7 @@ class SentinelParser extends UTF8JsonPullParser
           foreachMemberInCurrentObject {
                   // NOTE - this relies on member order in the serialization
             case ID => recordId = value.toString() // we accept both quoted and unquoted (int -> string)
+            case TYPE => recordType = value.toString()
             case DEVICE_ID => deviceId = value.intern // ditto
             case SENSOR_NO => sensorId = unQuotedValue.toInt
             case TIME_RECORDED => timeRecorded = dateTimeValue
@@ -210,7 +214,8 @@ class SentinelParser extends UTF8JsonPullParser
 
             case CLAIMS => skipPastAggregate()
             case EVIDENCE => skipPastAggregate()
-            case _ => // ignore other members
+            case other =>
+              if (isObjectValue || isArrayValue) skipPastAggregate() // ignore other members
           }
         }
 

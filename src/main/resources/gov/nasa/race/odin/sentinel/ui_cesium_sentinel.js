@@ -352,7 +352,7 @@ function initSentinelView() {
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
             { name: "", width: "2rem", attrs: [], map: e => e.alertStatus() },
-            { name: "id", width: "4rem", attrs: ["alignLeft"], map: e => e.sentinel.deviceName },
+            { name: "id", width: "5rem", attrs: ["alignLeft"], map: e => e.sentinel.deviceName },
             { name: "fire", tip: "fire probability [0..1]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.fireStatus() },
             { name: "smoke", tip: "smoke probability [0..1]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.smokeStatus() },
             { name: "img", tip: "number of available images", width: "4rem", attrs: ["fixed", "alignRight"], map: e => e.imageStatus() },
