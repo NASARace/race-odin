@@ -13,6 +13,18 @@ data storage that runs within and only serves the stakeholder network (e.g. an i
 reason why ODIN-fire could not run in the cloud we do not target publicly available services supporting thousands of simultaneous
 users/requests.
 
+You can get an idea about the data integration we aim at by watching our [TFRSAC](https://fsapps.nwcg.gov/nirops/pages/tfrsac) presentations:
+
+  - [spring 2023](https://www.youtube.com/watch?v=b9DfMBYCe-s&t=4950s)
+  - [fall 2022](https://www.youtube.com/watch?v=gCBXOaybDLA)
+
+<hr>
+**NOTE**
+<b>ODIN (and RACE) are currently (as of 12/2023) ported to Rust, please see [Why is ODIN ported to Rust] for details. While
+the live/czu examples of the Scala version will still work they do require to build native executables (e.g. 
+[WindNinja](https://www.firelab.org/project/windninja)).</b> 
+<hr>
+
 ODIN-fire is built on top of the open source RACE_ actor framework. Technically it uses the more general RACE system
 to support the specific application domain of wildland fire management. Consequently, the main distribution path is through the
 [RACE_repository](https://github.com/NASARace/race) and related binary artifacts. To that we have added a new 

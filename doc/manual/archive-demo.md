@@ -1,5 +1,11 @@
 # Building and Running Archive Replay Demo
 
+<hr>
+**NOTE 12/2023**
+Building and running demos is going to become significantly more simple in the upcoming Rust version
+of ODIN (see [Why is ODIN ported to Rust])
+<hr>
+
 The archived data demo from `config/odin-czu-demo.conf` shows a variety of input sources including
 
  * satellite fire detection (from the [CZU fire](https://en.wikipedia.org/wiki/CZU_Lightning_Complex_fires))
@@ -16,8 +22,9 @@ To run the demo please follow these steps:
 2. [Create Common Root Directory for RACE/ODIN components](common-root.md)
 3. [Obtain and Build RACE](building-race.md)
 4. [Obtain and Build RACE-ODIN](building-race-odin.md)
-5. [Obtain RACE-DATA](#obtain-race-data)
-6. [Start ODIN Live Data Demo](#start-odin-live-data-demo)
+5. Obtain and Build WindNinja (see [How to Build WindNinja])
+6. [Obtain RACE-DATA](#obtain-race-data)
+7. [Start ODIN Live Data Demo](#start-odin-live-data-demo)
 
 ## Obtain RACE-DATA
 This project only contains archived data. To retrieve it you need to have [Git-lfs](https://git-lfs.github.com/)

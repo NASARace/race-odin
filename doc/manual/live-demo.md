@@ -1,5 +1,11 @@
 # Building and Running Live Data Demo
 
+<hr>
+**NOTE 12/2023**
+Building and running demos is going to become significantly more simple in the upcoming Rust version
+of ODIN (see [Why is ODIN ported to Rust])
+<hr>
+
 The live-data demo from `config/odin-live.conf` shows the following input sources
 
  * (optional) aircraft ([ADS-B](https://www.faa.gov/air_traffic/technology/adsb/)) tracking
@@ -17,14 +23,23 @@ To run the demo please follow these steps:
  5. [Obtain and Configure Live Data Prerequisites](#obtain-and-configure-live-data-prerequisites)
  6. [Start ODIN Live Data Demo](#start-odin-live-data-demo)
 
-## Obtain and Configure Live Data Prerequisites
-The live data demo currently requires access configuration for the following external servers
+## Obtain (Build) and Configure Live Data Prerequisites
+The live data demo currently requires access configuration for the following external servers and executables:
  
  * (optional) ADS-B host
  * `https://space-track.org` - to obtain orbit parameters for JPSS satellites
  * `https://firms.modaps.eosdis.nasa.gov` - to obtain active fire data products from JPSS satellites
 
 In addition the [Orekit](https://www.orekit.org/) library needs ephemeris data to compute orbits of JPSS satellites.
+
+If you have access to the required hardware (see [PiAware](https://www.flightaware.com/adsb/piaware/)) you
+can also build & run your own [dump1090]((https://github.com/flightaware/dump1090) edge server. Please refer to
+respective documentation of how to build on your platform (this requires `make` and a working C compiler for
+your platform).
+
+The current ODIN demos make use of a specialized version of the [WindNinja](https://www.firelab.org/project/windninja)
+micro-grid wind simulator and associated data post-processors. Please see [How to build WindNinja].
+
 
 ### Configuring ADS-B (flight tracking) host
 The demo optionally reads flight tracking information from a host that runs the open source [dump1090](https://github.com/flightaware/dump1090)

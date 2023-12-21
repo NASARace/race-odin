@@ -1,13 +1,13 @@
 // example build configuration for projects using RACE
 
 name := "race-odin"
-scalaVersion := "2.13.11"
+scalaVersion := "2.13.12"
 
 enablePlugins(LaikaPlugin) // optional - to generate website and slides
 
 // those settings are not RACE specific but recommended when running applications from within a SBT shell
 
-val raceVersion = "1.8.+"
+val raceVersion = "1.9.+"
 
 lazy val root = (project in file(".")).
   enablePlugins(JavaAppPackaging,LauncherJarPlugin). // provides 'stage' task to generate stand alone scripts that can be executed outside SBT

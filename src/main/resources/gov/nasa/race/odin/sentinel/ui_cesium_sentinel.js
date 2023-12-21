@@ -604,7 +604,13 @@ function handleSentinelUpdatesMessage(sentinelUpdates) {
             }
             else if (r.voc) updateSentinelReadings(e, 'voc', r, sentinelVocView);
             else if (r.accelerometer) updateSentinelReadings(e, 'accelerometer', r, sentinelAccelView);
-            else if (r.gps) updateSentinelReadings(e, 'gps', r, sentinelGpsView);
+            else if (r.gps) {
+                updateSentinelReadings(e, 'gps', r, sentinelGpsView);
+                if (!e.assets) {
+                    e.assets = createAssets(e);
+                    uiCesium.requestRender();
+                }
+            }
             else if (r.thermometer) {
                 updateSentinelReadings(e, 'thermometer', r, sentinelThermoView);
                 updateDetails(e);

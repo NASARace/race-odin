@@ -230,7 +230,9 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
 
   def requestSensors (deviceId: String): Unit = {
     info(s"requesting sensor info for device: $deviceId")
-    httpRequestStrict(uri=s"$baseUrl/devices/$deviceId/sensors?sort=no,ASC", headers=requestHdrs) {
+    val requestUri = s"$baseUrl/devices/$deviceId/sensors?sort=no,ASC"
+   // println(s"@@@ request: '$requestUri'")
+    httpRequestStrict( uri=requestUri, headers=requestHdrs) {
       case Success(strictEntity) => self ! SensorResponse(deviceId, strictEntity.getData().toArray)
       case FailureEx(x) => error(s"failed to obtain sensor list for device $deviceId: $x")
     }
@@ -241,6 +243,8 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
   }
 
   def processSensors(msg: SensorResponse): Unit = {
+    //println(s"@@ processSensors: '${new String(msg.data)}'")
+
     if (parser.initialize(msg.data)) {
       val sensorInfos = parser.parseSensors()
       val deviceId = msg.deviceId
@@ -289,6 +293,8 @@ class SentinelConnectorActor(val config: Config) extends PublishingRaceActor
 
   def processRecords(msg: RecordResponse): Unit = {
     ifSome(writeToRaw){ publish(_, msg.data)} // for (optional) clients that do their own record parsing/processing
+
+    //println(s"@@ processRecords: '${msg.data}'")
 
     if (parser.initialize(msg.data)) {
       val ssrs = parser.parseRecords().filter(updateDevice)
