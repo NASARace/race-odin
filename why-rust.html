@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">Why is ODIN ported to Rust</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation for RACE-ODIN</a></li>
+                  <li class="level2"><a href="vision.html">Vision behind RACE-ODIN</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="live-demo.html">Building and Running Live Data Demo</a></li>
+                  <li class="level2"><a href="archive-demo.html">Building and Running Archive Replay Demo</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2"><a href="data-sources.html">Wildland Fire Data Sources</a></li>
+                  <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
+                  <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
+                  <li class="level2"><a href="common-root.html">Create Common Root Dir for RACE/ODIN</a></li>
+                  <li class="level2"><a href="cesium-access-token.html">Cesium Access Token</a></li>
+                  <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+                  <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
+                  <li class="level2"><a href="prerequisites.html">Check Prerequisites for RACE-ODIN</a></li>
+                  <li class="level2"><a href="windninja.html">How to Build WindNinja</a></li>
+                  <li class="level2 active"><a href="#">Why is ODIN ported to Rust</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="why-is-odin-ported-to-rust" class="title">Why is ODIN ported to Rust</h1>
+            <p>As of 12/2023 we have started to port the ODIN server infrastructure to Rust. This became necessary
+            because our focus has shifted from RACEs original goal of building a Java-based prototyping environment for 
+            distributed simulations to ODINs goal of supporting field-deployable production servers that also utilize external 
+            native libraries and applications. In other words ODIN (as an application domain) is now the focus, not the
+            underlying library to implement it. The main design principle stays the same: using actors to create scalable
+            concurrent systems.</p>
+            <p>Although RACE was cross-platform (because of its pure Java use) it was originally supposed to run on dedicated
+            machines with respective admin support. Installation requires to build from sources, which means there are several
+            prerequisites (recent JDK version, Git, SBT build system, local RACE repository clone). </p>
+            <p>ODIN servers on the other hand will have to run on machines that do not require <em>build-from-source</em> installation and might
+            not have the computational resources of a Java production server. ODIN applications also make use of existing external
+            native software, i.e. they are <em>not</em> pure Java. This means the original build-from-source / all-batteries-included approach
+            of RACE is not applicable anymore.</p>
+            <p>There are additional reasons for porting ODIN. RACE was heavily based on the excellent <a href="https://akka.io/">Akka</a> library 
+            for its actor system implementation. As of 09/2022 <a href="https://www.lightbend.com/">Lightbend</a> - the owner of Akka - has 
+            moved from Apache to a proprietary license. While ODIN as an open source project could have been exempt the same
+            is not necessarily true for ODIN&#39;s user community, which includes companies and universities. For this reason ODIN got
+            stuck with Akka &lt; 2.7, which means there also was a delay in critical patches.</p>
+            <p>Lastly, RACE was using Scala 2.3. In order to stay abreast with latest versions of major dependencies we would have
+            had to port RACE to Scala 3. For all these reasons change was inevitable.</p>
+            <p>Our solution is twofold:</p>
+            <p>(1) port to a native programming environment with good cross-platform support and a rich eco-system for server
+            implementation. <a href="https://www.rust-lang.org/">Rust</a> has proven itself as a very suitable choice. The capability to
+            produce single file, statically linked applications that can safely use the huge eco-system of Rust crates
+            and incorporate native C/C++ libraries is invaluable. We can also significantly reduce runtime cost (both memory
+            and CPU) of ODIN applications.</p>
+            <p>(2) move functions that are not easy to build for/run on ODIN stakeholder machines to dedicated Rust-based edge servers
+            that make use of the same infrastructure we create for (1). This means we build new edge servers that replace
+            external ones such as <a href="https://github.com/flightaware/dump1090">dump1090</a> (for ADS-B tracking), and add new ones for
+            functions that are more ODIN specific (e.g. for <a href="https://www.firelab.org/project/windninja">WindNinja</a> micro grid wind
+            integration), all from the same programming environment/build system. These servers will enjoy the same easy
+            deployment we gain from (1).</p>
+            <p>This porting effort is now well under way and sources are gradually showing up in the RACE repository. We expect to have
+            first examples around 03/2024. Please contact <code>peter.c.mehlitz@nasa.gov</code> if you have questions regarding the ODIN
+            Rust version.</p>
+        </div>
+
+    </body>
+</html>

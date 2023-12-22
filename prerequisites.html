@@ -29,6 +29,7 @@
                   <li class="level2"><a href="#_2-install-the-sbt-build-tool">2. install the SBT build tool</a></li>
                   <li class="level2"><a href="#_3-install-git-and-git-lfs">3. install Git and Git-LFS</a></li>
                   <li class="level2"><a href="#_4-obtain-cesium-ion-access-token">4. Obtain Cesium Ion access token</a></li>
+                  <li class="level2"><a href="#_5-native-build-environment-for-3rd-party-executables">5. Native Build Environment for 3rd party executables</a></li>
                 </ul>
             </div>
             <div class="toc globaltoc">
@@ -51,6 +52,8 @@
                   <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
                   <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
                   <li class="level2 active"><a href="#">Check Prerequisites for RACE-ODIN</a></li>
+                  <li class="level2"><a href="windninja.html">How to Build WindNinja</a></li>
+                  <li class="level2"><a href="why-rust.html">Why is ODIN ported to Rust</a></li>
                 </ul>
             </div>
         </div>
@@ -69,6 +72,9 @@
             </ul>
             <ul>
               <li>obtain a Cesium Ion access token</li>
+            </ul>
+            <ul>
+              <li>(optionally) CMake and C/C++ compilers to build native 3rd party executables</li>
             </ul>
             
             <h3 id="_1-install-a-recent-java-jdk" class="section"><a class="anchor-link left" href="#_1-install-a-recent-java-jdk"><i class="icofont-laika">&#xef71;</i></a>1. install a recent Java JDK</h3>
@@ -91,7 +97,17 @@
             <h3 id="_4-obtain-cesium-ion-access-token" class="section"><a class="anchor-link left" href="#_4-obtain-cesium-ion-access-token"><i class="icofont-laika">&#xef71;</i></a>4. Obtain Cesium Ion access token</h3>
             <p>Although not strictly required for occasionally running the basic RACE-ODIN demos it is recommended to obtain a free
             Cesium Ion access token from <a href="https://cesium.com/ion/signup/">https://cesium.com/ion/signup/</a>. Once you have an access token, please enter it into
-            your &#39;Private Configuration&#39;.</p>
+            your <a href="private-configuration.html#private-configuration-vault">Private Configuration Vault</a>.</p>
+            
+            <h3 id="_5-native-build-environment-for-3rd-party-executables" class="section"><a class="anchor-link left" href="#_5-native-build-environment-for-3rd-party-executables"><i class="icofont-laika">&#xef71;</i></a>5. Native Build Environment for 3rd party executables</h3>
+            <p>If you want to use ODIN with native 3rd party executables such as <a href="https://www.firelab.org/project/windninja">WindNinja</a>
+            (micro grid wind simulation from Missoula FireLab) and <a href="https://github.com/flightaware/dump1090">dump1090</a> (ADS-B edge
+            server) you also need respective native build environments for your platform (make/<a href="https://cmake.org/">CMake</a>, a 
+            C/C++ compiler and required 3rd party libraries such as <a href="https://gdal.org/">GDAL</a>). Those have to be installed through
+            operating specific package management systems (e.g.<a href="https://brew.sh/">homebrew</a> on MacOS).
+            The <a href="live-demo.html#building-and-running-live-data-demo">Building and Running Live Data Demo</a> page includes some descriptions of how to build those externals but 
+            platform-specific details are beyond the scope of this documentation. This is going  to be greatly simplified once 
+            we have ported ODIN to Rust (see <a href="why-rust.html#why-is-odin-ported-to-rust">Why is ODIN ported to Rust</a>) </p>
         </div>
 
     </body>

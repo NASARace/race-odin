@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>RACE</title>
+
+        <link href="./race-html.css" rel="stylesheet"/>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class=""banner>
+                <a href="./index.html" ><img class="logo" src="./images/odin128.png"></a>
+                <p class="doctitle">Documentation</p>
+            </div>
+            <br/>
+            <div class="toc">
+                <p class="title">Project Links</p>
+                <ul>
+                    <li><span class="toc level2"><a href="https://github.com/NASARace/race-odin.git">Repository</a></span></li>
+                    <li><span class="toc level2"><a href="http://nasarace.github.io/race-odin">Website</a></span></li>
+                </ul>
+            </div>
+            <div class="toc pagetoc">
+                <p class="title">Page</p>
+                <ul class="nav-list">
+                  <li class="level1 active"><a href="#">How to Build WindNinja</a></li>
+                </ul>
+            </div>
+            <div class="toc globaltoc">
+                <p class="title">Site</p>
+                <ul class="nav-list">
+                  <li class="level1 nav-header">RACE-ODIN Manual</li>
+                  <li class="level2"><a href="index.html">About ODIN-fire</a></li>
+                  <li class="level2"><a href="motivation.html">Motivation for RACE-ODIN</a></li>
+                  <li class="level2"><a href="vision.html">Vision behind RACE-ODIN</a></li>
+                  <li class="level2"><a href="opensource.html">Why is ODIN-fire Open Sourced</a></li>
+                  <li class="level2"><a href="live-demo.html">Building and Running Live Data Demo</a></li>
+                  <li class="level2"><a href="archive-demo.html">Building and Running Archive Replay Demo</a></li>
+                  <li class="level2"><a href="application.html">Anatomy of an ODIN-fire application</a></li>
+                  <li class="level2"><a href="presentations.html">Presentations</a></li>
+                  <li class="level2"><a href="data-sources.html">Wildland Fire Data Sources</a></li>
+                  <li class="level2"><a href="private-configuration.html">Private Configuration Vault</a></li>
+                  <li class="level2"><a href="building-race.html">Obtain and Build RACE</a></li>
+                  <li class="level2"><a href="common-root.html">Create Common Root Dir for RACE/ODIN</a></li>
+                  <li class="level2"><a href="cesium-access-token.html">Cesium Access Token</a></li>
+                  <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
+                  <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
+                  <li class="level2"><a href="prerequisites.html">Check Prerequisites for RACE-ODIN</a></li>
+                  <li class="level2 active"><a href="#">How to Build WindNinja</a></li>
+                  <li class="level2"><a href="why-rust.html">Why is ODIN ported to Rust</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <h1 id="how-to-build-windninja" class="title">How to Build WindNinja</h1>
+            <p><br>
+            <hr>
+            <strong>NOTE 12/2023</strong>
+            The following steps refer to the Scala version of ODIN. This is going to be simplified in the upcoming
+            Rust version of ODIN (see <a href="why-rust.html#why-is-odin-ported-to-rust">Why is ODIN ported to Rust</a>).
+            <hr>
+            <br></p>
+            <p>ODIN demos make use of the <a href="https://www.firelab.org/project/windninja">WindNinja</a> micro-grid wind simulator
+            from <a href="https://www.firelab.org/">Missoula FireLab</a>. Since we need a raw (height,u,v,w) output mode this requires to
+            obtain a WindNinja variant that is not yet merged back into the main WindNinja repository.</p>
+            <p>Note that the build requires <a href="https://git-scm.com/">Git</a>, <a href="https://cmake.org/">CMake</a> and a working C/C++ compiler as pre-requisites.</p>
+            <p>We also need a working installation of the <a href="https://gdal.org/">GDAL</a> library and executables, which should be
+            obtained through your operating specific package management system (e.g. <a href="https://brew.sh/">homebrew</a> on MacOS
+            or <a href="https://vcpkg.io/en/">vcpkg</a> on Windows). Once installed (you need the shared library and the executables) you
+            can verify by running <code>gdalinfo --help</code> from the command line.</p>
+            <p>To obtain and build <a href="https://github.com/pcmehlitz/windninja.git">our WindNinja fork</a>, please follow these steps on a 
+            Linux/Unix/MacOS system:</p>
+            <pre><code>    # choose a build/install directory
+    mkdir micro-wind
+    cd micro-wind
+    git clone https://github.com/pcmehlitz/windninja.git
+
+    # build windninja
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DNINJA_CLI=ON -DNINJA_QTGUI=OFF ../windninja
+    cmake --build .
+    
+    # basic test
+    src/cli/WindNinja_cli --help</code></pre>
+            <p>Since ODIN needs to transform the raw WindNinja output (h,u,v,w GeoTiff file) into CSV follow these steps
+            to build from sources that are included in the RACE repository.</p>
+            <pre><code>    # switch to the gdalutil directory within your RACE clone
+    cd $RACE_ROOT/race-earth/src/main/c++/gdalutil
+    
+    # build gdalutil
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    cmake --build .
+    
+    # basic test
+    src/huvw_csv_grid</code></pre>
+            <p>Once the <code>WindNinja_cli</code>, <code>huvw_csv_grid</code> and <code>huvw_csv_vector</code> executables have been built we have to tell
+            ODIN where to find them. The easiest way to do this is to add a </p>
+            <pre><code>   executable-paths = &quot;../race-executables&quot;</code></pre>
+            <p>line to respective config files, create a <code>race-executables</code> directory above your ODIN directory and then create
+            symbolic links in there to the executables built above:</p>
+            <pre><code>   # from ODIN/RACE root
+   cd ..
+   mkdir race-executables
+   cd race-executables
+   
+   # adapt to your WindNinja/RACE directory choices
+   ln -s ../micro-wind/build/src/cli/WindNinja_cli WindNinja_cli
+   ln -s ../race/race-earth/src/main/c++/gdalutil/build/src/huvw_csv_grid huvw_csv_grid
+   ln -s ../race/race-earth/src/main/c++/gdalutil/build/src/huvw_csv_vector huvw_csv_vector</code></pre>
+            <p>(please not <code>ln</code> is Linux/MacOS, symbolic links on Windows are created with <code>mklink</code>)</p>
+        </div>
+
+    </body>
+</html>

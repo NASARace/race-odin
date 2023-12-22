@@ -47,6 +47,8 @@
                   <li class="level2"><a href="building-race-odin.html">Obtain and Build RACE-ODIN</a></li>
                   <li class="level2"><a href="running-odin.html">Running RACE-ODIN Applications</a></li>
                   <li class="level2"><a href="prerequisites.html">Check Prerequisites for RACE-ODIN</a></li>
+                  <li class="level2"><a href="windninja.html">How to Build WindNinja</a></li>
+                  <li class="level2"><a href="why-rust.html">Why is ODIN ported to Rust</a></li>
                 </ul>
             </div>
         </div>
@@ -64,6 +66,21 @@
             data storage that runs within and only serves the stakeholder network (e.g. an incident command post). Although there is no
             reason why ODIN-fire could not run in the cloud we do not target publicly available services supporting thousands of simultaneous
             users/requests.</p>
+            <p>You can get an idea about the data integration we aim at by watching our <a href="https://fsapps.nwcg.gov/nirops/pages/tfrsac">TFRSAC</a> presentations:</p>
+            <ul>
+              <li><a href="https://www.youtube.com/watch?v=b9DfMBYCe-s&t=4950s">spring 2023</a></li>
+            </ul>
+            <ul>
+              <li><a href="https://www.youtube.com/watch?v=gCBXOaybDLA">fall 2022</a></li>
+            </ul>
+            <p><br>
+            <hr>
+            <strong>NOTE</strong>
+            <b>ODIN (and RACE) are currently (as of 12/2023) ported to Rust, please see <a href="why-rust.html#why-is-odin-ported-to-rust">Why is ODIN ported to Rust</a> for details. While
+            the live/czu examples of the Scala version will still work they do require to build native executables (e.g. 
+            <a href="https://www.firelab.org/project/windninja">WindNinja</a>).</b> 
+            <hr>
+            <br></p>
             <p>ODIN-fire is built on top of the open source RACE_ actor framework. Technically it uses the more general RACE system
             to support the specific application domain of wildland fire management. Consequently, the main distribution path is through the
             <a href="https://github.com/NASARace/race">RACE_repository</a> and related binary artifacts. To that we have added a new 
