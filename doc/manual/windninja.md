@@ -1,13 +1,15 @@
 # How to Build WindNinja
 
+<br>
 <hr>
 **NOTE 12/2023**
-The following steps refer to the Java version of ODIN. This is going to be simplified in the upcoming
+The following steps refer to the Scala version of ODIN. This is going to be simplified in the upcoming
 Rust version of ODIN (see [Why is ODIN ported to Rust]).
 <hr>
+<br>
 
 ODIN demos make use of the [WindNinja](https://www.firelab.org/project/windninja) micro-grid wind simulator
-from {Missoula FireLab](https://www.firelab.org/). Since we need a raw (height,u,v,w) output mode this requires to
+from [Missoula FireLab](https://www.firelab.org/). Since we need a raw (height,u,v,w) output mode this requires to
 obtain a WindNinja variant that is not yet merged back into the main WindNinja repository.
 
 Note that the build requires [Git](https://git-scm.com/), [CMake](https://cmake.org/) and a working C/C++ compiler as pre-requisites.
@@ -17,7 +19,8 @@ obtained through your operating specific package management system (e.g. [homebr
 or [vcpkg](https://vcpkg.io/en/) on Windows). Once installed (you need the shared library and the executables) you
 can verify by running `gdalinfo --help` from the command line.
 
-To obtain and build our WindNinja fork, please follow these steps on a Linux/Unix/MacOS system:
+To obtain and build [our WindNinja fork](https://github.com/pcmehlitz/windninja.git), please follow these steps on a 
+Linux/Unix/MacOS system:
 ```
     # choose a build/install directory
     mkdir micro-wind
@@ -68,9 +71,9 @@ symbolic links in there to the executables built above:
    cd race-executables
    
    # adapt to your WindNinja/RACE directory choices
-   ln -s ../micro-wind/build/build/src/cli/WindNinja_cli WindNinja_cli
-   ln -s ../race/race-earth/src/main/c++/gdalutil/src/huvw_csv_grid huvw_csv_grid
-   ln -s ../race/race-earth/src/main/c++/gdalutil/src/huvw_csv_vector huvw_csv_vector
+   ln -s ../micro-wind/build/src/cli/WindNinja_cli WindNinja_cli
+   ln -s ../race/race-earth/src/main/c++/gdalutil/build/src/huvw_csv_grid huvw_csv_grid
+   ln -s ../race/race-earth/src/main/c++/gdalutil/build/src/huvw_csv_vector huvw_csv_vector
 ```
 
 (please not `ln` is Linux/MacOS, symbolic links on Windows are created with `mklink`)

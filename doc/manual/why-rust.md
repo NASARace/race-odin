@@ -18,8 +18,8 @@ of RACE is not applicable anymore.
 
 There are additional reasons for porting ODIN. RACE was heavily based on the excellent [Akka](https://akka.io/) library 
 for its actor system implementation. As of 09/2022 [Lightbend](https://www.lightbend.com/) - the owner of Akka - has 
-changed from Apache to a proprietary license. While ODIN as an open source project could have been exempt the same
-is not necessarily true for ODIN's user community, which includes companies and universities. For that reason ODIN got
+moved from Apache to a proprietary license. While ODIN as an open source project could have been exempt the same
+is not necessarily true for ODIN's user community, which includes companies and universities. For this reason ODIN got
 stuck with Akka < 2.7, which means there also was a delay in critical patches.
 
 Lastly, RACE was using Scala 2.3. In order to stay abreast with latest versions of major dependencies we would have
@@ -30,7 +30,7 @@ Our solution is twofold:
 (1) port to a native programming environment with good cross-platform support and a rich eco-system for server
 implementation. [Rust](https://www.rust-lang.org/) has proven itself as a very suitable choice. The capability to
 produce single file, statically linked applications that can safely use the huge eco-system of Rust crates
-and incorporate native C/C++ libraries is invaluable. We also can significantly reduce runtime cost (both memory
+and incorporate native C/C++ libraries is invaluable. We can also significantly reduce runtime cost (both memory
 and CPU) of ODIN applications.
 
 (2) move functions that are not easy to build for/run on ODIN stakeholder machines to dedicated Rust-based edge servers
@@ -41,6 +41,6 @@ integration), all from the same programming environment/build system. These serv
 deployment we gain from (1).
 
 This porting effort is now well under way and sources are gradually showing up in the RACE repository. We expect to have
-first examples around 03/2024. Please [contact us](mailto:peter.c.mehlitz@nasa.gov) if you have questions regarding
-the ODIN port.
+first examples around 03/2024. Please contact `peter.c.mehlitz@nasa.gov` if you have questions regarding the ODIN
+Rust version.
 

@@ -23,7 +23,7 @@ To run the demo please follow these steps:
  5. [Obtain and Configure Live Data Prerequisites](#obtain-and-configure-live-data-prerequisites)
  6. [Start ODIN Live Data Demo](#start-odin-live-data-demo)
 
-## Obtain (Build) and Configure Live Data Prerequisites
+## Obtain and Configure Live Data Prerequisites
 The live data demo currently requires access configuration for the following external servers and executables:
  
  * (optional) ADS-B host
@@ -33,7 +33,7 @@ The live data demo currently requires access configuration for the following ext
 In addition the [Orekit](https://www.orekit.org/) library needs ephemeris data to compute orbits of JPSS satellites.
 
 If you have access to the required hardware (see [PiAware](https://www.flightaware.com/adsb/piaware/)) you
-can also build & run your own [dump1090]((https://github.com/flightaware/dump1090) edge server. Please refer to
+can also build and run your own [dump1090](https://github.com/flightaware/dump1090) edge server. Please refer to
 respective documentation of how to build on your platform (this requires `make` and a working C compiler for
 your platform).
 

@@ -18,12 +18,14 @@ You can get an idea about the data integration we aim at by watching our [TFRSAC
   - [spring 2023](https://www.youtube.com/watch?v=b9DfMBYCe-s&t=4950s)
   - [fall 2022](https://www.youtube.com/watch?v=gCBXOaybDLA)
 
+<br>
 <hr>
 **NOTE**
 <b>ODIN (and RACE) are currently (as of 12/2023) ported to Rust, please see [Why is ODIN ported to Rust] for details. While
 the live/czu examples of the Scala version will still work they do require to build native executables (e.g. 
 [WindNinja](https://www.firelab.org/project/windninja)).</b> 
 <hr>
+<br>
 
 ODIN-fire is built on top of the open source RACE_ actor framework. Technically it uses the more general RACE system
 to support the specific application domain of wildland fire management. Consequently, the main distribution path is through the
