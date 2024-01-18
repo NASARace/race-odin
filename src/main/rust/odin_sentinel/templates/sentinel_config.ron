@@ -1,0 +1,8 @@
+// config template for odin_sentinel
+
+SentinelConfig (
+  base_uri: {{http_uri}},           // string literal starting with http:// or https://, including port
+  ws_uri: {{ws_uri}},               // string literal starting with ws:// or wss://, including port
+  access_token: {{access_token}},   // string literal
+  max_history: 1,
+)
