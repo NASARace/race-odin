@@ -19,17 +19,28 @@
 
 use std::{collections::HashMap,sync::Arc};
 use odin_actor::prelude::*;
-use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,AbortHandle,JoinHandle,spawn};
+use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,AbortHandle,JoinHandle,spawn, MpscSender,MpscReceiver,create_mpsc_sender_receiver};
 use reqwest::{Client};
 use crate::*;
+use crate::ws::{WsCmd};
+
+const PING_TIMER: i64 = 1;
 
 macro_rules! define_update {
     ($f:ident <- $r:ty) => { paste!{
         async fn [<update_ $f>] (&mut self, rec: $r)->Result<()> {
             let sentinel = self.sentinels.sentinel_of(&rec.device_id)?;
-            let json = Arc::new(serde_json::to_string(&rec)?);
-            sort_in_record(&mut sentinel.$f, rec);
-            Ok(self.json_update_callbacks.trigger(json).await?)
+
+            // only convert if there are clients for it
+            let json = if !self.json_update_callbacks.is_empty() { Some(Arc::new(serde_json::to_string(&rec)?)) } else { None };
+            let update_rec = if !self.update_callbacks.is_empty() { Some( Arc::<SentinelUpdate>::new(rec.clone().into())) } else { None };
+
+            sort_in_record(&mut sentinel.$f, rec); // this consumes the rec
+
+            if let Some(json) = json { self.json_update_callbacks.trigger(json).await; } // we don't propagate errors here
+            if let Some(update_rec) = update_rec { self.update_callbacks.trigger(update_rec).await; }
+
+            Ok(())
         }
     }}
 }
@@ -39,10 +50,12 @@ pub struct SentinelConnector {
     config: Arc<SentinelConfig>,
     sentinels: SentinelStore,
 
-    timer: Option<AbortHandle>,
+    ping_timer: Option<AbortHandle>,
     acquisition_task: Option<JoinHandle<()>>,
+    cmd_sender: Option<MpscSender<WsCmd>>,  // the sender end of the channel to send commands
 
     /// callbacks to be triggered upon receiving a new record
+    update_callbacks: CallbackList<Arc<SentinelUpdate>>,
     json_update_callbacks: CallbackList<Arc<String>>,
 }
 
@@ -51,13 +64,17 @@ impl SentinelConnector {
         SentinelConnector {
             config: Arc::new(config),
             sentinels: SentinelStore::new(),
-            timer: None,
+            ping_timer: None,
             acquisition_task: None,
+            cmd_sender: None,
+
+
+            update_callbacks: CallbackList::new(),
             json_update_callbacks: CallbackList::new(),
         }
     }
 
-    async fn run_acquisition_task (hself: ActorHandle<SentinelConnectorMsg>, config: Arc<SentinelConfig>)->Result<()> {
+    async fn run_acquisition_task (hself: ActorHandle<SentinelConnectorMsg>, cmd_receiver: MpscReceiver<WsCmd>, config: Arc<SentinelConfig>)->Result<()> {
         let http_client = Client::new();
 
         // obtain the initial record set for our sentinel devices
@@ -126,14 +143,26 @@ impl_actor! { match msg for Actor<SentinelConnector,SentinelConnectorMsg> as
         let hself = self.hself.clone();
         let config = self.config.clone();
 
-        self.acquisition_task = Some(
+        if let Some(ping_interval) = config.ping_interval {
+            self.ping_timer = Some(self.start_repeat_timer( PING_TIMER, ping_interval));
+        }
+
+        self.acquisition_task = Some({
+            let (tx,rx) = create_mpsc_sender_receiver::<WsCmd>(8);
+            self.cmd_sender = Some(tx);
+
             spawn( async move {
-                SentinelConnector::run_acquisition_task( hself, config).await;
-            })
+                SentinelConnector::run_acquisition_task( hself, rx, config).await;
+            })}
         );
     }
     _Timer_ => cont! { 
-
+        match msg.id {
+            PING_TIMER => {
+                if let Some(tx) = &self.cmd_sender { tx.send( WsCmd::new_ping("ping")).await; }
+            }
+            _ => {}
+        }
     }
     _Terminate_ => stop! {
         if let Some(task) = &self.acquisition_task {

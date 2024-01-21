@@ -18,7 +18,8 @@
 #![allow(unused)]
 
 use std::{sync::Arc};
-use futures_util::{SinkExt,StreamExt};
+use futures::{SinkExt,StreamExt};
+use chrono::Utc;
 use tokio_tungstenite::{
     connect_async, WebSocketStream, MaybeTlsStream, 
     tungstenite::{self,
@@ -165,7 +166,36 @@ pub enum WsMsg {
     Record { device_id: String, sensor_no: u32, #[serde(alias="type")] rec_type: SensorCapability },
 
     #[serde(rename_all="camelCase")]
+    Pong { request_time: u64, response_time: u64, message_id: String },
+
+    #[serde(alias="trigger-alert",rename_all="camelCase")]
+    TriggerAlert { device_id: String, message_id: String, result: String },
+
+    #[serde(rename_all="camelCase")]
     Error { message: String }
+}
+
+/// outgoing websocket messages
+#[derive(Serialize,Deserialize,Debug,PartialEq)]
+#[serde(tag="event", content="data", rename_all="lowercase")]
+pub enum WsCmd {
+    #[serde(rename_all="camelCase")]
+    Ping { request_time: u64, message_id: String },  // time is epoch millis
+
+    #[serde(alias="trigger-alert",rename_all="camelCase")]
+    TriggerAlert { device_ids: Vec<String>, message_id: String },
+
+    #[serde(alias="switch-lights", rename_all="camelCase")]
+    SwitchLights { device_ids: Vec<String>, #[serde(alias="type")] light_type: String, state: String, message_id: String },
+
+    #[serde(alias="switch-valve", rename_all="camelCase")]
+    SwitchValve { device_ids: Vec<String>, state: String, message_id: String  },
+}
+
+impl WsCmd {
+    pub fn new_ping (msg_id: impl ToString)-> WsCmd {
+        WsCmd::Ping { request_time: Utc::now().timestamp_millis() as u64, message_id: msg_id.to_string() }
+    }
 }
 
 /* #endregion websocket messages */

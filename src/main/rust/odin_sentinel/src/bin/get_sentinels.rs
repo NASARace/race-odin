@@ -44,11 +44,11 @@ enum OutputFormat { Rust, Ron, Json }
 #[structopt(about = "Delphire Sentinel data retriever tool")]
 struct CliOpts {
     /// run verbose
-    #[structopt(short)]
+    #[structopt(short,long)]
     verbose: bool,
 
     /// produce formatted output
-    #[structopt(short)]
+    #[structopt(short,long)]
     pretty: bool,
 
     /// output format (rust,ron,json)

@@ -18,6 +18,7 @@ path = "src/bin/monitor_ws.rs"
 odin_actor = { workspace = true }
 odin_common = { workspace = true }
 odin_config = { workspace = true }
+odin_macro = { workspace = true }
 
 anyhow = "*"
 thiserror = "*"
@@ -27,7 +28,8 @@ ron = "*"
 serde = "*"
 uom = { version = "*", features = ["serde", "i64"] }
 tokio = { version = "*", features = ["full"] }
-futures-util = "*"
+futures = "*"
+async-stream = "*"
 reqwest = { version = "*", features = ["json", "stream"] }
 http = "*"
 url = "*"

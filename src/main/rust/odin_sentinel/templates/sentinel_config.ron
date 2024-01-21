@@ -5,4 +5,5 @@ SentinelConfig (
   ws_uri: {{ws_uri}},               // string literal starting with ws:// or wss://, including port
   access_token: {{access_token}},   // string literal
   max_history: 1,
+  ping_interval: Some( {{Duration}} ),     // optional string literal with timer interval for sending websocket Ping messages
 )

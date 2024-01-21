@@ -19,16 +19,19 @@
 #[macro_use]
 extern crate lazy_static;
 
-use std::{process::Output, path::PathBuf, str::FromStr, fmt::{Display,Formatter}, fs::File, io::Write};
+use std::{process::Output, path::PathBuf, str::FromStr, fmt::{Display,Formatter}, fs::File, io::Write, time::Duration};
 use anyhow::Result;
 use structopt::StructOpt;
 use displaydoc::Display;
 use tokio;
+use tokio_tungstenite::{tungstenite::protocol::Message};
 use reqwest;
+use futures::{pin_mut,select,Stream,stream::{self,StreamExt},SinkExt};
+use async_stream::stream;
 use strum::EnumString;
 use chrono::prelude::*;
 use odin_sentinel::{SentinelConfig,get_device_list_from_config};
-use odin_sentinel::ws::{connect,read_next_ws_msg,request_join,WsMsg};
+use odin_sentinel::ws::{connect,read_next_ws_msg,request_join,WsStream,WsMsg,WsCmd};
 use odin_config::load_config;
 
 /// command line arg: {0}
@@ -82,37 +85,92 @@ async fn main()->Result<()> {
 
     let (mut ws,_) = connect( &config).await?;
     let resp = read_next_ws_msg(&mut ws).await?;
-    println!("{:?}", resp);
+    log_ws_msg(&resp);
 
     request_join( &mut ws, device_ids, get_next_msg_id(&mut msg_id)).await?;
     let resp = read_next_ws_msg(&mut ws).await?;
-    println!("{:?}", resp);
+    log_ws_msg(&resp);
 
-    loop {
-        let msg = read_next_ws_msg(&mut ws).await?;
-        log_ws_msg(&msg);
+    if let Some(ping_interval) = config.ping_interval {
+        run_with_ping(&mut ws, ping_interval).await;
+    } else {
+        run_without_ping(&mut ws).await;
     }
 
     Ok(())
 }
 
+async fn run_without_ping (ws: &mut WsStream) {
+    loop {
+        if let Ok(msg) = read_next_ws_msg(ws).await {
+            log_ws_msg(&msg);
+        }
+    }
+}
+
+async fn run_with_ping (ws: &mut WsStream, interval: Duration) {
+    let (mut write,read_stream) = ws.split();
+    let msg_stream = read_stream.fuse();
+    let ping_stream = new_ping_stream(interval).fuse();
+
+    pin_mut!( msg_stream, ping_stream);
+
+    loop {
+        select! {
+            msg = msg_stream.next() => {
+                if let Some(msg) = msg {
+                    if let Ok(msg) = msg {
+                        match msg {
+                            Message::Text(msg) => {
+                                if let Ok(msg) = serde_json::from_str( msg.as_str()) {
+                                    log_ws_msg(&msg);
+                                }
+                            }
+                            other => {
+                                println!("ignoring non-text message {:?}", other);
+                            }
+                        }
+                    }
+                }
+            },
+            ping = ping_stream.next() => {
+                if let Some(ping) = ping {
+                    log_ws_cmd(&ping);
+                    if let Ok(json) = serde_json::to_string(&ping) {
+                        let ws_msg = Message::Text(json);
+                        write.send(ws_msg).await;
+                    }
+                }
+            } 
+        }
+    }
+}
+
+fn new_ping_stream (interval: Duration)->impl Stream<Item=WsCmd> {
+    stream::unfold( 0, move |cycle| async move {
+        tokio::time::sleep( interval).await;
+        let cmd = WsCmd::new_ping( format!("ping-{}", cycle));
+        Some( (cmd, cycle+1) )
+    })
+}
+
 fn get_next_msg_id (msg_id: &mut usize)->String {
     *msg_id += 1;
-    msg_id.to_string()        
+    msg_id.to_string()
 }
 
 fn log_ws_msg (msg: &WsMsg)->Result<()> {
     let mut stdout = std::io::stdout().lock();
     if ARGS.time {
         let now = Local::now();
-        let ts = format!("[{}] ", now.format("%H:%M:%S%.3f"));
+        let ts = format!("[{}]", now.format("%H:%M:%S%.3f"));
         stdout.write_all(ts.as_bytes());
     }
 
+    stdout.write(b"> ");
     match ARGS.format {
         OutputFormat::Json => {
             let s = if ARGS.pretty {
-                stdout.write(b"\n");
                 serde_json::to_string_pretty(msg)?
             } else {
                 serde_json::to_string(msg)?
@@ -122,14 +180,13 @@ fn log_ws_msg (msg: &WsMsg)->Result<()> {
         }
         OutputFormat::Rust => {
             if ARGS.pretty {
-                writeln!( stdout, "\n{:#?}", msg);
+                writeln!( stdout, "{:#?}", msg);
             } else {
-                writeln!( stdout, "\n{:?}", msg);
+                writeln!( stdout, "{:?}", msg);
             };
         }
         OutputFormat::Ron => {
             let s = if ARGS.pretty {
-                stdout.write(b"\n");
                 ron::ser::to_string_pretty(msg, ron::ser::PrettyConfig::default())?
             } else {
                 ron::to_string(msg)?
@@ -138,5 +195,18 @@ fn log_ws_msg (msg: &WsMsg)->Result<()> {
             stdout.write(b"\n");
         }
     }
+    Ok(())
+}
+
+fn log_ws_cmd (cmd: &WsCmd)->Result<()> {
+    let mut stdout = std::io::stdout().lock();
+    if ARGS.time {
+        let now = Local::now();
+        let ts = format!("[{}]", now.format("%H:%M:%S%.3f"));
+        stdout.write_all(ts.as_bytes());
+    }
+    stdout.write(b"< ");
+    writeln!( stdout, "{:?}", cmd);
+
     Ok(())
 }

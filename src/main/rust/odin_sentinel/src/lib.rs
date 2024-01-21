@@ -17,9 +17,10 @@
 #![allow(unused)]
 #![feature(trait_alias)]
 
-use std::{collections::{VecDeque,HashMap},fmt::{self,Debug},cmp::Ordering,future::Future, ops::RangeBounds};
+use std::{collections::{VecDeque,HashMap},fmt::{self,Debug},cmp::Ordering,future::Future, ops::RangeBounds, time::Duration};
 use actor::SentinelConnectorMsg;
 use odin_actor::MsgReceiver;
+use odin_macro::define_algebraic_type;
 use serde::{Deserialize,Serialize};
 use serde_json;
 use ron;
@@ -37,7 +38,7 @@ mod errors;
 pub use errors::*;
 
 
-/* #region sentinel record  ***************************************************************************/
+/* #region snesor record  ***************************************************************************/
 
 pub trait CapabilityProvider {
     fn capability()->SensorCapability;
@@ -52,7 +53,7 @@ macro_rules! assoc_capability {
 }
 
 pub type DeviceId = String;
-pub trait RecordDataBounds = CapabilityProvider + Serialize + for<'de2> Deserialize<'de2> + Debug + Clone;
+pub trait RecordDataBounds = CapabilityProvider + Serialize + for<'de2> Deserialize<'de2> + Debug + Clone + 'static;
 
 #[derive(Serialize,Deserialize,Debug,Clone)]
 #[serde(bound = "T: Serialize, for<'de2> T: Deserialize<'de2>")]
@@ -113,6 +114,31 @@ impl<T> Eq for SensorRecord<T> where T: RecordDataBounds {}
 pub struct RecordId {
     pub id: String,
 }
+
+/// enum to give us a single non-generic type we can use to wrap any record so that we can publish it through a single msg/callback slot
+/// note this also defined respective From<SensorRecord<..>> impls
+define_algebraic_type!{ pub SentinelUpdate =
+    SensorRecord<AccelerometerData> |
+    SensorRecord<AnemometerData> |
+    SensorRecord<CloudcoverData> |
+    SensorRecord<FireData> |
+    SensorRecord<GasData> |
+    SensorRecord<GpsData> |
+    SensorRecord<GyroscopeData> |
+    SensorRecord<ImageData> |
+    SensorRecord<MagnetometerData> |
+    SensorRecord<OrientationData> |
+    SensorRecord<PersonData> |
+    SensorRecord<PowerData> |
+    SensorRecord<SmokeData> |
+    SensorRecord<ThermometerData> |
+    SensorRecord<ValveData> |
+    SensorRecord<VocData>
+}
+
+/* #endregion sensor record */
+
+/* #region record payload data *********************************************************************************/
 
 #[derive(Serialize,Deserialize,Debug,PartialEq,Clone)]
 #[serde(rename_all="camelCase")]
@@ -273,7 +299,6 @@ pub struct VocData {
 }
 assoc_capability!(VocData: Voc);
 
-
 // set of supported capabilities. We don't care much about upper/lowercase since they are
 // only used in constructing http queries (which are case-insensitive)
 #[derive(Serialize,Deserialize,Debug,PartialEq,Copy,Clone)] 
@@ -297,7 +322,7 @@ pub enum SensorCapability {
     Voc
 }
 
-/* #endregion record payload */
+/* #endregion record payload data */
 
 /* #region other query responses **********************************************************************/
 
@@ -503,22 +528,16 @@ pub fn sort_in_record<T> (list: &mut VecDeque<SensorRecord<T>>, rec: SensorRecor
 
 #[derive(Deserialize)]
 pub struct SentinelConfig {
-    pub(crate) base_uri: String,
-    pub(crate) ws_uri: String,
+    pub base_uri: String,
+    pub ws_uri: String,
     pub(crate) access_token: String, // TODO - should probably be a [u8;N]
-    pub(crate) max_history: usize,
+    pub max_history: usize,
+
+    pub ping_interval: Option<Duration>, // interval duration for sending Ping messages on the websocket
 
     //... and a lot more to come
 
     // TODO - add optional device_id -> device_name map 
-}
-
-/// we provide an explicit impl to make sure we don't accidentally leak auth data
-impl Debug for SentinelConfig {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SentinelConfig( base_uri:\"{}\", access_token:\"{}...\", max_history: {})", 
-                  self.base_uri, &self.access_token.as_str()[..6], self.max_history)
-    }
 }
 
 /* #endregion config */
