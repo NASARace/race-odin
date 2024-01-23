@@ -18,11 +18,13 @@
 #![allow(unused)]
 
 use std::{collections::HashMap,sync::Arc};
+use futures::stream::{StreamExt,SplitSink};
+use tokio_tungstenite::tungstenite::protocol::Message;
 use odin_actor::prelude::*;
 use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,AbortHandle,JoinHandle,spawn, MpscSender,MpscReceiver,create_mpsc_sender_receiver};
 use reqwest::{Client};
 use crate::*;
-use crate::ws::{WsCmd};
+use crate::ws::{WsStream,WsCmd, init_websocket, run_websocket, send_ws_text_msg, read_next_ws_msg};
 
 const PING_TIMER: i64 = 1;
 
@@ -51,12 +53,15 @@ pub struct SentinelConnector {
     sentinels: SentinelStore,
 
     ping_timer: Option<AbortHandle>,
-    acquisition_task: Option<JoinHandle<()>>,
-    cmd_sender: Option<MpscSender<WsCmd>>,  // the sender end of the channel to send commands
+    websocket_task: Option<JoinHandle<Result<()>>>,
+    ws_write: Option<SplitSink<WsStream,Message>>,  // the sender end of the channel to send commands to the acquisition task
 
-    /// callbacks to be triggered upon receiving a new record
-    update_callbacks: CallbackList<Arc<SentinelUpdate>>,
-    json_update_callbacks: CallbackList<Arc<String>>,
+    //-- callbacks 
+    init_callbacks: CallbackList<()>,  // triggered when sentinels are initialized
+
+    //-- callbacks triggered upon receiving a new record
+    update_callbacks: CallbackList<Arc<SentinelUpdate>>,  // triggered by new SensorRecords
+    json_update_callbacks: CallbackList<Arc<String>>, // triggered by new SensorRecords
 }
 
 impl SentinelConnector {
@@ -65,25 +70,30 @@ impl SentinelConnector {
             config: Arc::new(config),
             sentinels: SentinelStore::new(),
             ping_timer: None,
-            acquisition_task: None,
-            cmd_sender: None,
+            websocket_task: None,
+            ws_write: None,
 
-
+            init_callbacks: CallbackList::new(),
             update_callbacks: CallbackList::new(),
             json_update_callbacks: CallbackList::new(),
         }
     }
 
-    async fn run_acquisition_task (hself: ActorHandle<SentinelConnectorMsg>, cmd_receiver: MpscReceiver<WsCmd>, config: Arc<SentinelConfig>)->Result<()> {
+    async fn run_init_task (hself: ActorHandle<SentinelConnectorMsg>, config: Arc<SentinelConfig>)->Result<()> {
         let http_client = Client::new();
 
-        // obtain the initial record set for our sentinel devices
-        let sentinel_store = init_sentinel_store_from_config( &http_client, config.as_ref()).await?;
-        hself.send_msg( sentinel_store).await?;
+        let sentinel_store = init_sentinel_store_from_config( &http_client, &config).await?; // this might take a while so we shouldn't await it in receive()
+        Ok(hself.send_msg( sentinel_store).await?)
+    }
 
-        // now register for record update and open a websocket to get update notifications
+    async fn send_ws_cmd (&mut self, cmd: WsCmd)->Result<()> {
+        if let Some(mut tx) = self.ws_write.as_mut() { 
+            let json = serde_json::to_string(&cmd)?;
+            send_ws_text_msg( &mut tx, json).await
 
-        Ok(())
+        } else {
+            Err( op_failed("no websocket"))
+        }
     }
 
     define_update! { accel       <- SensorRecord<AccelerometerData> }
@@ -106,19 +116,21 @@ impl SentinelConnector {
 }
 
 
-#[derive(Debug)] pub struct AddJsonUpdateCallback { id: String, action: Callback<Arc<String>> }
+#[derive(Debug)] pub struct AddInitCallback { pub id: String, pub action: Callback<()> }
+
+#[derive(Debug)] pub struct AddJsonUpdateCallback { pub id: String, pub action: Callback<Arc<String>> }
 
 /// message to request a single callback execution with the current Sentinel snapshot in JSON format
 /// (since this is a single execution there is no point transmitting this as an Arc<String>) 
-#[derive(Debug)] pub struct TriggerJsonSnapshot(Callback<String>);
-
+#[derive(Debug)] pub struct TriggerJsonSnapshot(pub Callback<String>);
 
 define_actor_msg_type! { pub SentinelConnectorMsg = 
-    // client interface
+    // messages we get from other actors
+    AddInitCallback |
     AddJsonUpdateCallback |
     TriggerJsonSnapshot |
 
-    // messages we get from our acquisition task
+    // messages we get from ourself (spawned tasks)
     SentinelStore |
     SensorRecord<AccelerometerData> |
     SensorRecord<AnemometerData> |
@@ -135,7 +147,8 @@ define_actor_msg_type! { pub SentinelConnectorMsg =
     SensorRecord<SmokeData> |
     SensorRecord<ThermometerData> |
     SensorRecord<ValveData> |
-    SensorRecord<VocData>
+    SensorRecord<VocData> |
+    OdinSentinelError
 }
 
 impl_actor! { match msg for Actor<SentinelConnector,SentinelConnectorMsg> as 
@@ -143,32 +156,10 @@ impl_actor! { match msg for Actor<SentinelConnector,SentinelConnectorMsg> as
         let hself = self.hself.clone();
         let config = self.config.clone();
 
-        if let Some(ping_interval) = config.ping_interval {
-            self.ping_timer = Some(self.start_repeat_timer( PING_TIMER, ping_interval));
-        }
-
-        self.acquisition_task = Some({
-            let (tx,rx) = create_mpsc_sender_receiver::<WsCmd>(8);
-            self.cmd_sender = Some(tx);
-
-            spawn( async move {
-                SentinelConnector::run_acquisition_task( hself, rx, config).await;
-            })}
-        );
+        spawn( SentinelConnector::run_init_task( hself, config)); // this can take some time so we have to spawn
     }
-    _Timer_ => cont! { 
-        match msg.id {
-            PING_TIMER => {
-                if let Some(tx) = &self.cmd_sender { tx.send( WsCmd::new_ping("ping")).await; }
-            }
-            _ => {}
-        }
-    }
-    _Terminate_ => stop! {
-        if let Some(task) = &self.acquisition_task {
-            task.abort();
-            self.acquisition_task = None;
-        }
+    AddInitCallback => cont! {
+        self.init_callbacks.add( msg.id, msg.action )
     }
     AddJsonUpdateCallback => cont! {
         self.json_update_callbacks.add( msg.id, msg.action )
@@ -178,9 +169,43 @@ impl_actor! { match msg for Actor<SentinelConnector,SentinelConnectorMsg> as
             msg.0.trigger(s).await;
         }
     }
-    SentinelStore => cont! {
+    SentinelStore => cont! { // we get this once run_init_task() is completed
+        let device_ids = msg.get_device_ids();
         self.sentinels = msg;
-        println!("Sentinels initialized");
+
+        self.init_callbacks.trigger(()).await;
+
+        if !device_ids.is_empty() {
+            let hself = self.hself.clone();
+            let config = self.config.clone();
+
+            if let Ok(ws_stream) = init_websocket(self.config.clone(), device_ids).await {
+                let (ws_write, ws_read) = ws_stream.split();
+                self.ws_write = Some(ws_write);
+
+                self.websocket_task = Some( spawn( run_websocket( hself, config, ws_read)) );
+                if let Some(interval) = self.config.ping_interval {
+                    self.ping_timer = Some( self.start_repeat_timer( PING_TIMER, interval) )
+                }
+            }
+        }
+    }
+    _Timer_ => cont! { 
+        match msg.id {
+            PING_TIMER => { self.send_ws_cmd( WsCmd::new_ping("ping")).await; }
+            _ => {}
+        }
+    }
+    OdinSentinelError => cont! {
+        // something went wrong with the websocket
+        // TODO - this is where we should catch a prematurely closed websocket
+        println!("@@ {:?}", msg)
+    }
+    _Terminate_ => stop! {
+        if let Some(task) = &self.websocket_task {
+            task.abort();
+            self.websocket_task = None;
+        }
     }
     SensorRecord<AccelerometerData> => cont! { self.update_accel(msg).await }
     SensorRecord<AnemometerData>    => cont! { self.update_anemo(msg).await }

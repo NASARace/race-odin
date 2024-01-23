@@ -1,5 +1,5 @@
 
-use odin_sentinel::{Result,DeviceList,SensorList, RecordList, GpsData};
+use odin_sentinel::{Result,DeviceList,SensorList, RecordList, GpsData, SensorRecord, VocData};
 
 // get {host}/devices
 #[test]
@@ -30,5 +30,20 @@ fn test_sensor_gps_records()->Result<()> {
 
     let gps_record_list: RecordList<GpsData> = serde_json::from_str(input)?;
     println!("-- GPS record-list:\n{gps_record_list:#?}");
+
+    Ok(())
+}
+
+#[test]
+fn test_serde_roundtrip()->Result<()> {
+    // since we derive Deserialize but impl Serialize we have to test the roundtrip
+    let input = r#"{"id":"eYdrMhE4b55MO87oJF9r","timeRecorded":"2024-01-23T20:32:01.004Z","sensorNo":39,"deviceId":"roo7gd1dldn3","evidences":[],"claims":[],"voc":{"tvoc":138,"e_co2":489}}"#;
+
+    let rec: SensorRecord<VocData> = serde_json::from_str(input)?;
+    println!("parsed voc record: {:?}", rec);
+
+    let json = serde_json::to_string(&rec)?;
+    println!("generated json: {}", json);
+    assert_eq!( json.as_str(), input);
     Ok(())
 }

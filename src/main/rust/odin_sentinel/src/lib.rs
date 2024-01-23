@@ -17,11 +17,11 @@
 #![allow(unused)]
 #![feature(trait_alias)]
 
-use std::{collections::{VecDeque,HashMap},fmt::{self,Debug},cmp::Ordering,future::Future, ops::RangeBounds, time::Duration};
+use std::{collections::{VecDeque,HashMap},fmt::{self,Debug},cmp::Ordering,future::Future, ops::RangeBounds, time::Duration, sync::atomic::{self,AtomicU64}};
 use actor::SentinelConnectorMsg;
 use odin_actor::MsgReceiver;
 use odin_macro::define_algebraic_type;
-use serde::{Deserialize,Serialize};
+use serde::{Deserialize,Serialize,Serializer};
 use serde_json;
 use ron;
 use chrono::{DateTime,Utc};
@@ -37,6 +37,16 @@ pub mod ws;
 mod errors;
 pub use errors::*;
 
+#[macro_use]
+extern crate lazy_static;
+
+lazy_static! {
+    static ref MSG_COUNTER: AtomicU64 = AtomicU64::new(42);
+}
+
+pub fn get_next_msg_id ()->String {
+    MSG_COUNTER.fetch_add( 1, atomic::Ordering::SeqCst).to_string()
+}
 
 /* #region snesor record  ***************************************************************************/
 
@@ -55,7 +65,7 @@ macro_rules! assoc_capability {
 pub type DeviceId = String;
 pub trait RecordDataBounds = CapabilityProvider + Serialize + for<'de2> Deserialize<'de2> + Debug + Clone + 'static;
 
-#[derive(Serialize,Deserialize,Debug,Clone)]
+#[derive(Deserialize,Debug,Clone)]
 #[serde(bound = "T: Serialize, for<'de2> T: Deserialize<'de2>")]
 #[serde(rename_all="camelCase")]
 pub struct SensorRecord <T> where T: RecordDataBounds {   
@@ -69,6 +79,8 @@ pub struct SensorRecord <T> where T: RecordDataBounds {
     pub claims: Vec<RecordId>,
 
     // here is the crux - we get this as different properties ("gps" etc - it depends on T)
+    // since we need to preserve the mapping for subsequent serializing we have to provide alias annotations (for de)
+    // *and* our own Serialize impl 
     // TODO - check if we can rename this - it is redundant to the 'type' property in the response JSON anyways
     #[serde(
         alias = "accelerometer",
@@ -89,6 +101,21 @@ pub struct SensorRecord <T> where T: RecordDataBounds {
         alias = "voc"
     )]
     pub data: T,
+}
+
+impl<T> Serialize for SensorRecord<T> where T: RecordDataBounds {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(Some(7))?;
+        map.serialize_entry("id", &self.id)?;
+        map.serialize_entry("timeRecorded", &self.time_recorded)?;
+        map.serialize_entry("sensorNo", &self.sensor_no)?;
+        map.serialize_entry("deviceId", &self.device_id)?;
+        map.serialize_entry("evidences", &self.evidences)?;
+        map.serialize_entry("claims", &self.claims)?;
+        map.serialize_entry( T::capability().property_name(), &self.data)?; // this is why we need our own Serialize impl
+        map.end()
+    }
 }
 
 impl<T> Ord for SensorRecord<T> where T: RecordDataBounds {
@@ -299,8 +326,6 @@ pub struct VocData {
 }
 assoc_capability!(VocData: Voc);
 
-// set of supported capabilities. We don't care much about upper/lowercase since they are
-// only used in constructing http queries (which are case-insensitive)
 #[derive(Serialize,Deserialize,Debug,PartialEq,Copy,Clone)] 
 #[serde(rename_all="lowercase")]
 pub enum SensorCapability {
@@ -320,6 +345,29 @@ pub enum SensorCapability {
     Thermometer,
     Valve,
     Voc
+}
+impl SensorCapability {
+    fn property_name (&self)->&'static str {
+        use SensorCapability::*;
+        match *self {
+            Accelerometer => "accelerometer",
+            Anemometer => "anemometer",
+            Cloudcover => "cloudcover",
+            Fire => "fire",
+            Gas => "gas",
+            Gps => "gps",
+            Gyroscope => "gyroscope",
+            Image => "image",
+            Magnetometer => "magnetometer",
+            Orientation => "orientation",
+            Person => "person",
+            Power => "power",
+            Smoke => "smoke",
+            Thermometer => "thermometer",
+            Valve => "valve",
+            Voc => "voc"  
+        }
+    }
 }
 
 /* #endregion record payload data */
@@ -397,6 +445,10 @@ impl SentinelStore {
 
     pub fn values (&self)->Vec<&Sentinel> {
         self.sentinels.values().collect()
+    }
+
+    pub fn get_device_ids (&self)->Vec<String> {
+        self.sentinels.keys().map( |k| k.clone()).collect()
     }
 
     pub fn to_json (&self, pretty: bool)->Result<String> {

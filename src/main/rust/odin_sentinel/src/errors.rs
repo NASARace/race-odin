@@ -62,6 +62,9 @@ pub enum OdinSentinelError {
     #[error("no such device error {0}")]
     NoSuchDeviceError(String),
 
+    #[error("no devices")]
+    NoDevicesError,
+
     // ...add specific errors here
 
     /// a generic error

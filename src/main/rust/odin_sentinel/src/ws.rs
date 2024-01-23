@@ -17,8 +17,8 @@
 
 #![allow(unused)]
 
-use std::{sync::Arc};
-use futures::{SinkExt,StreamExt};
+use std::{sync::{Arc, atomic::AtomicU64}};
+use futures::{SinkExt,StreamExt,stream::{SplitSink,SplitStream}};
 use chrono::Utc;
 use tokio_tungstenite::{
     connect_async, WebSocketStream, MaybeTlsStream, 
@@ -40,21 +40,49 @@ use crate::actor::*;
 
 pub type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
-pub async fn run_websocket (hself: ActorHandle<SentinelConnectorMsg>, config: Arc<SentinelConfig>, http_client: &Client, device_ids: Vec<String>)->Result<()> {
-    let mut msg_id = 0;
+pub async fn init_websocket (config: Arc<SentinelConfig>, device_ids: Vec<String>)->Result<WsStream> {
+    let (mut ws_stream,_) = connect( &config).await?;
+    expect_connected_response(&mut ws_stream).await?;
 
-    let (mut ws,_) = connect( config.as_ref()).await?;
-    expect_connected_response(&mut ws).await?;
+    request_join( &mut ws_stream, device_ids, get_next_msg_id()).await?;
+    expect_join_response(&mut ws_stream).await?;
 
-    request_join( &mut ws, device_ids.clone(), get_next_msg_id(&mut msg_id)).await?;
-    expect_join_response( &mut ws).await?;
+    Ok(ws_stream)
+}
 
+pub async fn run_websocket (hself: ActorHandle<SentinelConnectorMsg>, config: Arc<SentinelConfig>, mut ws_read: SplitStream<WsStream>)->Result<()> {
+    let http_client = reqwest::Client::new();
     loop {
-        match read_next_ws_msg( &mut ws).await? {
-            WsMsg::Record { device_id, sensor_no, rec_type } => {
-                get_and_send_record( &hself, http_client, config.base_uri.as_str(), config.access_token.as_str(), device_id.as_str(), sensor_no, rec_type).await?;
-            },
-            _ => {} // TODO - need to handle Pong and Error here
+        match ws_read.next().await {
+            Some(m) => {
+                match m {
+                    Ok(Message::Text(json)) => {
+                        match serde_json::from_str::<WsMsg>(&json) {
+                            Ok(msg) => {
+                                match msg {
+                                    WsMsg::Record { device_id, sensor_no, rec_type } => {
+                                        get_and_send_record( &hself, &http_client, config.base_uri.as_str(), config.access_token.as_str(), 
+                                                            device_id.as_str(), sensor_no, rec_type).await?;
+                                    }
+                                    WsMsg::Pong { request_time, response_time, message_id } => {}
+                                    WsMsg::Error { message } => {}
+                                    _ => {} // ignore other messages
+                                }
+                            }
+                            Err(e) => {} // TODO deserialization failed
+                        }
+                    }
+                    Ok(Message::Binary(bs)) => {} // TODO unexpected binary message
+                    Ok(Message::Ping(_)) => {} // system level ping
+                    Ok(Message::Pong(_)) => {} // system level pong
+                    Ok(Message::Close(_)) => {} // TODO 
+                    Ok(Message::Frame(_)) => {}
+                    Err(e) => {} // TODO websocket read error
+                }
+            }
+            None => {
+                // stream closed
+            }
         }
     }
 
@@ -90,6 +118,7 @@ pub async fn connect (config: &SentinelConfig)->Result<(WsStream, Response)> {
 pub async fn expect_connected_response (ws: &mut WsStream)->Result<()> {
     let resp = read_next_ws_msg(ws).await?;
     if let WsMsg::Connected{message} = resp {
+        // should we check message == "connected" here?
         Ok(())
     } else {
         Err( OdinSentinelError::WsProtocolError(format!("expected 'connected' message, got {:?}",resp)))
@@ -105,21 +134,24 @@ pub async fn request_join (ws: &mut WsStream, device_ids: Vec<String>, message_i
 pub async fn expect_join_response (ws: &mut WsStream)->Result<()> {
     let resp = read_next_ws_msg(ws).await?;
     if let WsMsg::Join{device_ids,message_id} = resp  {
-        Ok(())
+        if !device_ids.is_empty() {
+            Ok(())
+        } else {
+            Err( OdinSentinelError::NoDevicesError)
+        }
     } else {
         Err( OdinSentinelError::WsProtocolError(format!("expected 'join' message, got {:?}",resp)))
     }
+}
+
+pub async fn send_ws_text_msg (tx: &mut SplitSink<WsStream,Message>, msg: String)->Result<()> {
+    Ok(tx.send( Message::Text(msg)).await?)
 }
 
 pub async fn read_next_ws_msg (ws: &mut WsStream)->Result<WsMsg> {
     let json = ws.next().await.ok_or(tungstenite::error::Error::AlreadyClosed)??;
     let msg: WsMsg = serde_json::from_str( json.to_text()?)?;
     Ok(msg)
-}
-
-fn get_next_msg_id (msg_id: &mut usize)->String {
-    *msg_id += 1;
-    msg_id.to_string()        
 }
 
 pub async fn get_and_send_record (hself: &ActorHandle<SentinelConnectorMsg>, client: &Client, base_uri: &str, access_token: &str, 
