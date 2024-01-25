@@ -25,45 +25,53 @@ use structopt::StructOpt;
 use odin_actor::prelude::*;
 use odin_actor::tokio_kanal::{ActorSystem,Actor,ActorHandle};
 use odin_config::load_config;
-use odin_sentinel::{SentinelConfig,actor::{SentinelConnector,SentinelConnectorMsg,AddInitCallback,AddJsonUpdateCallback}};
+use odin_sentinel::{SentinelConfig,SentinelUpdate,actor::{SentinelConnector,SentinelConnectorMsg,AddInitCallback,AddUpdateCallback,AddJsonUpdateCallback}};
 use anyhow::Result;
 
 
 /* #region monitor actor *****************************************************************/
 
-#[derive(Debug)] pub struct SentinelDataAvailable;
+#[derive(Debug)] pub struct DataAvailable;
 
-#[derive(Debug)] pub struct SentinelSnapshot(String);
+#[derive(Debug)] pub struct Snapshot(String);
 
-#[derive(Debug)] pub struct SentinelUpdate(Arc<String>);
+#[derive(Debug)] pub struct Update(Arc<SentinelUpdate>);
 
-define_actor_msg_type! { SentinelMonitorMsg = SentinelDataAvailable | SentinelSnapshot | SentinelUpdate }
+#[derive(Debug)] pub struct JsonUpdate(Arc<String>);
+
+define_actor_msg_type! { SentinelMonitorMsg = DataAvailable | Snapshot | Update | JsonUpdate }
 
 struct SentinelMonitor {
-    source: ActorHandle<SentinelConnectorMsg> 
+    hconn: ActorHandle<SentinelConnectorMsg> 
 }
 
 impl_actor! { match msg for Actor<SentinelMonitor,SentinelMonitorMsg> as
     _Start_ => cont! {
+        // we could also use an async_callback that directly sends the TriggerJsonSnapshot and then
+        // the AddJsonUpdateCallback, which would save the SentinelDataAvailable. It's less readable
+        // though because of the nesting (creating callbacks from within callback actions)
+        let id = self.id().to_string();
         let hself = &self.hself;
-        let action = send_msg_callback!( hself <- || SentinelDataAvailable{} );
-        let _ = self.source.send_msg( AddInitCallback {id: String::from(self.id()), action} ).await;
+        self.hconn.send_msg( AddInitCallback{id, action: msg_callback!(hself, DataAvailable)}).await.ok();
     }
-    SentinelDataAvailable => cont! {
+    DataAvailable => cont! {
         let hself = &self.hself;
-        let action = send_msg_callback!( hself <- |json: String| SentinelSnapshot(json));
-        let _ = self.source.send_msg( TriggerJsonSnapshot(action) ).await;
-        
-        let action = send_msg_callback!( hself <- |json: Arc<String>| SentinelUpdate(json));
-        let _ = self.source.send_msg( AddJsonUpdateCallback {id: String::from(self.id()), action} ).await;
+        let hconn = &self.hconn;
+        hconn.send_msg( TriggerJsonSnapshot( msg_callback!( hself, |json:String| Snapshot(json)))).await.ok();
+        hconn.send_msg( AddUpdateCallback {id: self.id().to_string(), action: msg_callback!( hself, |rec:Arc<SentinelUpdate>| Update(rec))}).await.ok();
+        hconn.send_msg( AddJsonUpdateCallback {id: self.id().to_string(), action: msg_callback!( hself, |json:Arc<String>| JsonUpdate(json))}).await.ok();
     }
-    SentinelSnapshot => cont! {
+    Snapshot => cont! {
         println!("------------------------------ snapshot");
         println!("{}", msg.0);
     }
-    SentinelUpdate => cont! { 
+    Update => cont! { 
         println!("------------------------------ update");
-        println!("{}", msg.0) 
+        println!("{:?}", msg.0) 
+    }
+    JsonUpdate => cont! { 
+        println!("------------------------------ JSON update");
+        println!("JSON: {}", msg.0) 
     }
 }
 
@@ -86,7 +94,7 @@ async fn main ()->Result<()> {
     let mut actor_system = ActorSystem::new("main");
 
     let importer = spawn_actor!( actor_system, "importer", SentinelConnector::new(sentinel_config))?;
-    let monitor = spawn_actor!( actor_system, "monitor", SentinelMonitor{ source: importer })?;
+    let _ = spawn_actor!( actor_system, "monitor", SentinelMonitor{ hconn: importer })?;
 
     actor_system.start_all(millis(20)).await?;
     actor_system.process_requests().await?;

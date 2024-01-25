@@ -44,8 +44,11 @@ pub enum OdinSentinelError {
     #[error("websock error {0}")]
     WsError( #[from] tokio_tungstenite::tungstenite::Error),
 
-    #[error("websock protocol error {0}")]
-    WsProtocolError(String),
+    #[error("websock protocol error {0}")] 
+    WsProtocolError(String), // unexpected/wrong responses
+
+    #[error("websocket closed by server")]
+    WsClosedError,
 
     #[error("actor error {0}")]
     ActorError( #[from] OdinActorError),

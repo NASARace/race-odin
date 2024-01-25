@@ -17,7 +17,7 @@
 
 #![allow(unused)]
 
-use std::{collections::HashMap,sync::Arc};
+use std::{collections::HashMap,sync::{Arc,atomic::AtomicU64}};
 use futures::stream::{StreamExt,SplitSink};
 use tokio_tungstenite::tungstenite::protocol::Message;
 use odin_actor::prelude::*;
@@ -52,6 +52,8 @@ pub struct SentinelConnector {
     config: Arc<SentinelConfig>,
     sentinels: SentinelStore,
 
+    last_recv_epoch: Arc<AtomicU64>, // in millis
+
     ping_timer: Option<AbortHandle>,
     websocket_task: Option<JoinHandle<Result<()>>>,
     ws_write: Option<SplitSink<WsStream,Message>>,  // the sender end of the channel to send commands to the acquisition task
@@ -69,6 +71,9 @@ impl SentinelConnector {
         SentinelConnector {
             config: Arc::new(config),
             sentinels: SentinelStore::new(),
+
+            last_recv_epoch: Arc::new(AtomicU64::new(0)),
+
             ping_timer: None,
             websocket_task: None,
             ws_write: None,
@@ -96,6 +101,46 @@ impl SentinelConnector {
         }
     }
 
+    async fn set_sentinels (&mut self, sentinels: SentinelStore) {
+        self.sentinels = sentinels;
+        self.init_callbacks.trigger(()).await; // let other actors know we have data
+    }
+
+    async fn open_websocket (&mut self, hself: ActorHandle<SentinelConnectorMsg>) {
+        let device_ids = self.sentinels.get_device_ids();
+
+        if !device_ids.is_empty() {
+            let hself = hself.clone();
+            let config = self.config.clone();
+
+            if let Ok(ws_stream) = init_websocket(self.config.clone(), device_ids).await {
+                let (ws_write, ws_read) = ws_stream.split();
+                self.ws_write = Some(ws_write);
+
+                self.websocket_task = Some( spawn( run_websocket( hself.clone(), config, ws_read)) );
+                if let Some(interval) = self.config.ping_interval {
+                    self.ping_timer = Some( hself.start_repeat_timer( PING_TIMER, interval) )
+                }
+            }
+        }
+    }
+
+    fn cleanup_websocket (&mut self) {
+        self.ws_write = None;
+
+        if let Some(abort_handle) = &self.ping_timer {
+            abort_handle.abort()
+        }
+
+        if let Some(join_handle) = &self.websocket_task {
+            if !join_handle.is_finished() {
+                join_handle.abort();
+            }
+            self.websocket_task = None;
+        }
+
+    }
+
     define_update! { accel       <- SensorRecord<AccelerometerData> }
     define_update! { anemo       <- SensorRecord<AnemometerData> }
     define_update! { cloudcover  <- SensorRecord<CloudcoverData> }
@@ -118,6 +163,8 @@ impl SentinelConnector {
 
 #[derive(Debug)] pub struct AddInitCallback { pub id: String, pub action: Callback<()> }
 
+#[derive(Debug)] pub struct AddUpdateCallback { pub id: String, pub action: Callback<Arc<SentinelUpdate>> }
+
 #[derive(Debug)] pub struct AddJsonUpdateCallback { pub id: String, pub action: Callback<Arc<String>> }
 
 /// message to request a single callback execution with the current Sentinel snapshot in JSON format
@@ -127,6 +174,7 @@ impl SentinelConnector {
 define_actor_msg_type! { pub SentinelConnectorMsg = 
     // messages we get from other actors
     AddInitCallback |
+    AddUpdateCallback |
     AddJsonUpdateCallback |
     TriggerJsonSnapshot |
 
@@ -161,6 +209,9 @@ impl_actor! { match msg for Actor<SentinelConnector,SentinelConnectorMsg> as
     AddInitCallback => cont! {
         self.init_callbacks.add( msg.id, msg.action )
     }
+    AddUpdateCallback => cont! {
+        self.update_callbacks.add( msg.id, msg.action )
+    }
     AddJsonUpdateCallback => cont! {
         self.json_update_callbacks.add( msg.id, msg.action )
     }
@@ -170,42 +221,36 @@ impl_actor! { match msg for Actor<SentinelConnector,SentinelConnectorMsg> as
         }
     }
     SentinelStore => cont! { // we get this once run_init_task() is completed
-        let device_ids = msg.get_device_ids();
-        self.sentinels = msg;
-
-        self.init_callbacks.trigger(()).await;
-
-        if !device_ids.is_empty() {
-            let hself = self.hself.clone();
-            let config = self.config.clone();
-
-            if let Ok(ws_stream) = init_websocket(self.config.clone(), device_ids).await {
-                let (ws_write, ws_read) = ws_stream.split();
-                self.ws_write = Some(ws_write);
-
-                self.websocket_task = Some( spawn( run_websocket( hself, config, ws_read)) );
-                if let Some(interval) = self.config.ping_interval {
-                    self.ping_timer = Some( self.start_repeat_timer( PING_TIMER, interval) )
-                }
-            }
-        }
+        let hself = self.hself.clone();
+        self.set_sentinels(msg).await;
+        self.open_websocket( hself).await
     }
     _Timer_ => cont! { 
         match msg.id {
-            PING_TIMER => { self.send_ws_cmd( WsCmd::new_ping("ping")).await; }
+            PING_TIMER => { 
+                self.send_ws_cmd( WsCmd::new_ping("ping")).await; 
+            }
             _ => {}
         }
     }
     OdinSentinelError => cont! {
-        // something went wrong with the websocket
-        // TODO - this is where we should catch a prematurely closed websocket
-        println!("@@ {:?}", msg)
+        match msg {
+            OdinSentinelError::WsClosedError => {
+                eprintln!("@@ websocket closed by server");
+                self.cleanup_websocket();
+                // TODO - check if we should restart the init here
+            }
+            OdinSentinelError::JsonError(e) => {
+                eprintln!("@@ {:?}", e);
+            }
+            OdinSentinelError::WsError(e) => {
+                eprintln!("@@ {:?}", e);
+            }
+            _ => {} // ignore the rest
+        }
     }
     _Terminate_ => stop! {
-        if let Some(task) = &self.websocket_task {
-            task.abort();
-            self.websocket_task = None;
-        }
+        self.cleanup_websocket()
     }
     SensorRecord<AccelerometerData> => cont! { self.update_accel(msg).await }
     SensorRecord<AnemometerData>    => cont! { self.update_anemo(msg).await }

@@ -25,7 +25,7 @@ use serde::{Deserialize,Serialize,Serializer};
 use serde_json;
 use ron;
 use chrono::{DateTime,Utc};
-use odin_common::angle::{LatAngle, LonAngle, Angle};
+use odin_common::{angle::{LatAngle, LonAngle, Angle},datetime::deserialize_duration};
 use odin_actor::tokio_kanal::ActorHandle;
 use uom::si::f64::{Velocity,ThermodynamicTemperature,ElectricCurrent,ElectricPotential};
 use reqwest::Client;
@@ -105,16 +105,16 @@ pub struct SensorRecord <T> where T: RecordDataBounds {
 
 impl<T> Serialize for SensorRecord<T> where T: RecordDataBounds {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
-        use serde::ser::SerializeMap;
-        let mut map = serializer.serialize_map(Some(7))?;
-        map.serialize_entry("id", &self.id)?;
-        map.serialize_entry("timeRecorded", &self.time_recorded)?;
-        map.serialize_entry("sensorNo", &self.sensor_no)?;
-        map.serialize_entry("deviceId", &self.device_id)?;
-        map.serialize_entry("evidences", &self.evidences)?;
-        map.serialize_entry("claims", &self.claims)?;
-        map.serialize_entry( T::capability().property_name(), &self.data)?; // this is why we need our own Serialize impl
-        map.end()
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("SensorRecord", 7)?;
+        state.serialize_field("id", &self.id)?;
+        state.serialize_field("timeRecorded", &self.time_recorded)?;
+        state.serialize_field("sensorNo", &self.sensor_no)?;
+        state.serialize_field("deviceId", &self.device_id)?;
+        state.serialize_field("evidences", &self.evidences)?;
+        state.serialize_field("claims", &self.claims)?;
+        state.serialize_field( T::capability().property_name(), &self.data)?; // map generic 'data' back into original property name
+        state.end()
     }
 }
 
@@ -578,13 +578,14 @@ pub fn sort_in_record<T> (list: &mut VecDeque<SensorRecord<T>>, rec: SensorRecor
 
 /* #region config  ************************************************************************************/
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Serialize)]
 pub struct SentinelConfig {
     pub base_uri: String,
     pub ws_uri: String,
     pub(crate) access_token: String, // TODO - should probably be a [u8;N]
-    pub max_history: usize,
 
+    pub max_history_len: usize,
+    pub max_age: Duration,
     pub ping_interval: Option<Duration>, // interval duration for sending Ping messages on the websocket
 
     //... and a lot more to come
@@ -618,7 +619,7 @@ pub async fn init_sentinel_store (client: &Client, base_uri: &str, access_token:
 }
 
 pub async fn init_sentinel_store_from_config (client: &Client, config: &SentinelConfig)->Result<SentinelStore> {
-    init_sentinel_store(client, config.base_uri.as_str(), config.access_token.as_str(), config.max_history).await
+    init_sentinel_store(client, config.base_uri.as_str(), config.access_token.as_str(), config.max_history_len).await
 }
 
 /* #endregion initial query */

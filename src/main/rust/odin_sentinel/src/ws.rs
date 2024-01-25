@@ -69,7 +69,9 @@ pub async fn run_websocket (hself: ActorHandle<SentinelConnectorMsg>, config: Ar
                                     _ => {} // ignore other messages
                                 }
                             }
-                            Err(e) => {} // TODO deserialization failed
+                            Err(e) => {
+                                hself.send_msg( OdinSentinelError::JsonError(e)).await;
+                            }
                         }
                     }
                     Ok(Message::Binary(bs)) => {} // TODO unexpected binary message
@@ -77,11 +79,15 @@ pub async fn run_websocket (hself: ActorHandle<SentinelConnectorMsg>, config: Ar
                     Ok(Message::Pong(_)) => {} // system level pong
                     Ok(Message::Close(_)) => {} // TODO 
                     Ok(Message::Frame(_)) => {}
-                    Err(e) => {} // TODO websocket read error
+                    Err(e) => {
+                        hself.send_msg( OdinSentinelError::WsError(e)).await;
+                        // if this causes the websocket to be closed we still catch it in next() so we don't have to break here
+                    } 
                 }
             }
-            None => {
-                // stream closed
+            None => { // stream closed by server
+                hself.send_msg( OdinSentinelError::WsClosedError{}).await;
+                return Err(OdinSentinelError::WsClosedError{})
             }
         }
     }

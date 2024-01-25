@@ -26,6 +26,7 @@ chrono = { version = "*", features = ["serde"] }
 serde_json = "*"
 ron = "*"
 serde = "*"
+serde_with = "*" 
 uom = { version = "*", features = ["serde", "i64"] }
 tokio = { version = "*", features = ["full"] }
 futures = "*"
